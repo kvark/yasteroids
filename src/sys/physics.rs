@@ -10,7 +10,7 @@ impl System {
 }
 
 impl w::System for System {
-	fn process(&mut self, _: w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+	fn process(&mut self, _: &mut w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
 		let mut ia = entities.iter();
 		loop {
 			let a = match ia.next() {
@@ -23,8 +23,8 @@ impl w::System for System {
 						let dist = data.space.get(as_id).pos
 							.sub_p(&data.space.get(bs_id).pos)
 							.length2();
-						let ac = *data.collision.get(ac_id);
-						let bc = *data.collision.get(bc_id);
+						let ac = data.collision.get(ac_id).clone();
+						let bc = data.collision.get(bc_id).clone();
 						let diameter = ac.radius + bc.radius;
 						if dist < diameter && ac.health > 0 && bc.health > 0 {
 							//println!("Hit radius {} with radius {}",

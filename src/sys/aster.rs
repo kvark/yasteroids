@@ -1,22 +1,22 @@
-use std::rand::{Rng, StdRng};
+use rand::{Rng, StdRng};
 use cgmath::{Angle, Deg, Rad, ToRad, Point, Point2, Vector, sin, cos};
 use id::Id;
 use world as w;
 
-static KINDS: u8 = 2;
+const KINDS: usize = 2;
 
 pub struct System {
-    screen_ext: [f32; ..2],
+    screen_ext: [f32; 2],
     spawn_radius: f32,
     rate: f32,
     time_left: w::Delta,
     draw_id: Id<w::Drawable>,
-    pools: [Vec<w::Entity>; ..KINDS],
+    pools: [Vec<w::Entity>; KINDS],
     rng: StdRng,
 }
 
 impl System {
-    pub fn new(extents: [f32; ..2], draw_id: Id<w::Drawable>) -> System {
+    pub fn new(extents: [f32; 2], draw_id: Id<w::Drawable>) -> System {
         let radius = extents[0] + extents[1];
         System {
             screen_ext: extents,
@@ -79,9 +79,9 @@ impl System {
 }
 
 impl w::System for System {
-    fn process(&mut self, &(time, _): w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+    fn process(&mut self, &mut (time, _): &mut w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
         // cleanup
-        let (new_entities, reserve) = entities.partitioned(|e| {
+        let (new_entities, reserve): (Vec<_>, _) = entities.drain().partition(|e| {
             match (e.aster, e.space, e.collision) {
                 (Some(_), Some(s_id), Some(c_id)) => {
                     let is_destroyed = data.collision.get(c_id).health == 0;
@@ -102,7 +102,7 @@ impl w::System for System {
             }
         });
         *entities = new_entities;
-        self.pools[0].push_all_move(reserve);
+        self.pools[0].extend(reserve);
         // spawn
         self.time_left += time;
         while self.time_left >= self.rate {

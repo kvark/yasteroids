@@ -43,7 +43,7 @@ impl System {
 }
 
 impl w::System for System {
-    fn process(&mut self, &(time, _): w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+    fn process(&mut self, &mut (time, _): &mut w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
         self.check_input();
         self.cool_time = if self.cool_time > time {self.cool_time - time} else {0.0};
         if self.shoot && self.cool_time <= 0.0 {
@@ -91,7 +91,7 @@ impl w::System for System {
             };
             entities.push(ent);
         }
-        let (new_entities, reserve) = entities.partitioned(|ent| {
+        let (new_entities, reserve): (Vec<_>, _) = entities.drain().partition(|ent| {
             match (ent.bullet, ent.collision) {
                 (Some(b_id), Some(c_id)) => {
                     let is_destroyed = data.collision.get(c_id).health == 0;
@@ -113,6 +113,6 @@ impl w::System for System {
             }
         });
         *entities = new_entities;
-        self.pool.push_all_move(reserve);
+        self.pool.extend(reserve);
     }
 }

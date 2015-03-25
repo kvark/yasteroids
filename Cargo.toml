@@ -37,4 +37,5 @@ git = "https://github.com/bjz/glfw-rs.git"
 
 [dependencies]
 log = "*"
+rand = "*"
 time = "*"

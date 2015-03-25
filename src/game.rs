@@ -2,15 +2,17 @@ use time;
 use cgmath::{Rad, Point2, Vector2};
 use gfx;
 use gfx::traits::*;
+use gfx_device_gl;
 use world;
 
-static SCREEN_EXTENTS: [f32; ..2] = [10.0, 10.0];
+const SCREEN_EXTENTS: [f32; 2] = [10.0, 10.0];
 
+#[derive(Copy)]
 #[vertex_format]
 struct Vertex {
-    pos: [f32; ..2],
+    pos: [f32; 2],
     #[normalized]
-    color: [u8; ..4],
+    color: [u8; 4],
 }
 
 impl Vertex {
@@ -28,9 +30,9 @@ pub struct Game {
 }
 
 impl Game {
-    fn create_program<C: gfx::CommandBuffer, D: gfx::Device<C>>(device: &mut D)
-                      -> gfx::ProgramHandle {
-        device.link_program(
+    fn create_program<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F)
+                      -> gfx::ProgramHandle<R> {
+        factory.link_program(
             b"
                 #version 150 core
                 in vec2 pos;
@@ -56,18 +58,19 @@ impl Game {
         ).unwrap()
     }
 
-    fn create_ship<C: gfx::CommandBuffer, D: gfx::Device<C>>(device: &mut D,
+    fn create_ship(device: &mut gfx_device_gl::GlDevice,
                    data: &mut world::Components, draw: &mut ::sys::draw::System,
-                   program: gfx::ProgramHandle) -> world::Entity {
-        let mesh = device.create_mesh([
+                   program: gfx::ProgramHandle<gfx_device_gl::GlResources>)
+                   -> world::Entity {
+        let mesh = device.create_mesh(&[
             Vertex::new(-0.3, -0.5, 0x20C02000),
             Vertex::new(0.3, -0.5,  0x20C02000),
             Vertex::new(0.0, 0.5,   0xC0404000),
         ]);
         let slice = mesh.to_slice(gfx::PrimitiveType::TriangleList);
         let mut state = gfx::DrawState::new();
-        state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::CullNothing);
-        let batch = draw.context.batch(&mesh, slice, &program, &state).unwrap();
+        state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::Nothing);
+        let batch = draw.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
         data.add()
             .draw(batch)
             .space(world::Spatial {
@@ -76,7 +79,7 @@ impl Game {
                 scale: 1.0,
             })
             .inertia(world::Inertial {
-                velocity: Vector2::zero(),
+                velocity: Vector2::new(0.0, 0.0),
                 angular_velocity: Rad{ s:0.0 },
             })
             .control(world::Control {
@@ -91,24 +94,25 @@ impl Game {
             .entity
     }
 
-    pub fn new<C: gfx::CommandBuffer, D: gfx::Device<C>>(frame: gfx::Frame,
-               (ev_control, ev_bullet): ::event::ReceiverHub, device: &mut D) -> Game {
+    pub fn new(frame: gfx::Frame<gfx_device_gl::GlResources>,
+               (ev_control, ev_bullet): ::event::ReceiverHub,
+               device: &mut gfx_device_gl::GlDevice) -> Game {
         let mut w = world::World::new();
         // prepare systems
         let program = Game::create_program(device);
         let mut draw_system = ::sys::draw::System::new(SCREEN_EXTENTS, frame);
         let bullet_draw_id = {
-            let mesh = device.create_mesh([
+            let mesh = device.create_mesh(&[
                 Vertex::new(0.0, 0.0, 0xFF808000),
             ]);
             let slice = mesh.to_slice(gfx::PrimitiveType::Point);
             let mut state = gfx::DrawState::new();
             state.primitive.method = gfx::state::RasterMethod::Point;
-            let batch = draw_system.context.batch(&mesh, slice, &program, &state).unwrap();
+            let batch = draw_system.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
             w.data.draw.add(batch)
         };
         let aster_draw_id = {
-            let mesh = device.create_mesh([
+            let mesh = device.create_mesh(&[
                 Vertex::new(-0.5, -0.5, 0xFFFFFF00),
                 Vertex::new(0.5, -0.5,  0xFFFFFF00),
                 Vertex::new(-0.5, 0.5,  0xFFFFFF00),
@@ -116,30 +120,28 @@ impl Game {
             ]);
             let slice = mesh.to_slice(gfx::PrimitiveType::TriangleStrip);
             let mut state = gfx::DrawState::new();
-            state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::CullNothing);
-            let batch = draw_system.context.batch(&mesh, slice, &program, &state).unwrap();
+            state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::Nothing);
+            let batch = draw_system.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
             w.data.draw.add(batch)
         };
         let ship = Game::create_ship(device, &mut w.data, &mut draw_system, program);
         let (space_id, inertia_id) = (ship.space.unwrap(), ship.inertia.unwrap());
         // populate world and return
         w.entities.push(ship);
-        w.systems.push_all_move(vec![
-            Box::new(draw_system),// as Box<world::System + Send>,
-            Box::new(::sys::inertia::System),
-            Box::new(::sys::control::System::new(ev_control)),
-            Box::new(::sys::bullet::System::new(ev_bullet,
-                space_id, inertia_id, bullet_draw_id)),
-            Box::new(::sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id)),
-            Box::new(::sys::physics::System::new()),
-        ]);
+        w.add_system(draw_system);
+        w.add_system(::sys::inertia::System);
+        w.add_system(::sys::control::System::new(ev_control));
+        w.add_system(::sys::bullet::System::new(ev_bullet,
+                space_id, inertia_id, bullet_draw_id));
+        w.add_system(::sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id));
+        w.add_system(::sys::physics::System::new());
         Game {
             world: w,
             last_time: time::precise_time_ns(),
         }
     }
 
-    pub fn render(&mut self, renderer: &mut gfx::Renderer<gfx::GlCommandBuffer>) {
+    pub fn render(&mut self, renderer: &mut ::Renderer) {
         let new_time = time::precise_time_ns();
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;

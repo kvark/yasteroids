@@ -8,22 +8,29 @@ use gfx_device_gl;
 use id;
 
 pub type Delta = f32;
-pub type Params<'a, 'b> = &'a mut (
-    Delta,
-    &'b mut gfx::Renderer<gfx_device_gl::GlResources, gfx_device_gl::GlCommandBuffer>
-);
+pub type Params<'a> = (Delta, &'a mut ::Renderer);
 
 #[shader_param]
 pub struct ShaderParam<R: gfx::Resources> {
     //TODO: hide these
-    pub transform: [f32; ..4],
-    pub screen_scale: [f32; ..4],
+    pub transform: [f32; 4],
+    pub screen_scale: [f32; 4],
     _dummy: PhantomData<R>,
+}
+
+impl<R: gfx::Resources> ShaderParam<R> {
+    pub fn new() -> ShaderParam<R> {
+        ShaderParam {
+            transform: [0.0; 4],
+            screen_scale: [1.0; 4],
+            _dummy: PhantomData,
+        }
+    }
 }
 
 /// --- Components ---
 
-pub type Drawable = Batch;
+pub type Drawable = gfx::batch::RefBatch<ShaderParam<gfx_device_gl::GlResources>>;
 
 #[derive(Clone)]
 pub struct Spatial {

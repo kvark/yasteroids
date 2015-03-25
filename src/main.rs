@@ -1,4 +1,4 @@
-#![feature(custom_attribute, plugin)]
+#![feature(collections, core, custom_attribute, plugin)]
 #![plugin(gfx_macros)]
 
 extern crate cgmath;
@@ -9,6 +9,7 @@ extern crate glfw;
 extern crate id;
 #[macro_use]
 extern crate ecs;
+extern crate rand;
 extern crate time;
 
 use std::sync::mpsc;
@@ -27,17 +28,18 @@ mod sys {
     pub mod physics;
 }
 
-fn game_loop<R: gfx::Resources, C: gfx::CommandBuffer<R>>(
-             mut game: game::Game, ren_recv: mpsc::Receiver<gfx::Renderer<R, C>>,
-             ren_end: mpsc::Sender<gfx::Renderer<R, C>>) {
+pub type Renderer = gfx::Renderer<gfx_device_gl::GlResources, gfx_device_gl::CommandBuffer>;
+
+fn game_loop(mut game: game::Game, ren_recv: mpsc::Receiver<Renderer>,
+             ren_end: mpsc::Sender<Renderer>) {
     while game.is_alive() {
-        let mut renderer = match ren_recv.recv_opt() {
+        let mut renderer = match ren_recv.recv() {
             Ok(r) => r,
             Err(_) => break,
         };
         renderer.reset();
         game.render(&mut renderer);
-        match ren_end.send_opt(renderer) {
+        match ren_end.send(renderer) {
             Ok(_) => (),
             Err(_) => break,
         }
@@ -61,12 +63,12 @@ fn main() {
     println!("{}", USAGE);
 
     if use_glfw {
-        let glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
+        let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
         glfw.window_hint(glfw::WindowHint::ContextVersion(3, 2));
-        glfw.window_hint(glfw::WindowHint::OpenglProfile(glfw::OpenGlProfileHint::OpenGlCoreProfile));
+        glfw.window_hint(glfw::WindowHint::OpenglProfile(glfw::OpenGlProfileHint::Core));
         glfw.set_error_callback(glfw::FAIL_ON_ERRORS);
 
-        let (window, events) = glfw
+        let (mut window, events) = glfw
             .create_window(640, 480, title, glfw::WindowMode::Windowed)
             .expect("Failed to create GLFW window.");
 
@@ -79,13 +81,13 @@ fn main() {
         let game = game::Game::new(frame, ev_recv, &mut device);
 
         let renderer = device.create_renderer();
-        game_send.send(renderer.clone_empty()); // double-buffering renderers
-        game_send.send(renderer);
+        game_send.send(renderer.clone_empty()).unwrap(); // double-buffering renderers
+        game_send.send(renderer).unwrap();
 
         std::thread::spawn(|| game_loop(game, game_recv, game_send));
 
         while !window.should_close() {
-            let renderer = match dev_recv.recv_opt() {
+            let renderer = match dev_recv.recv() {
                 Ok(r) => r,
                 Err(_) => break,
             };
@@ -99,7 +101,7 @@ fn main() {
                 }
             }
             device.submit(renderer.as_buffer());
-            match dev_send.send_opt(renderer) {
+            match dev_send.send(renderer) {
                 Ok(_) => (),
                 Err(_) => break,
             }
@@ -120,23 +122,26 @@ fn main() {
         let game = game::Game::new(frame, ev_recv, &mut device);
 
         let renderer = device.create_renderer();
-        game_send.send(renderer.clone_empty()); // double-buffering renderers
-        game_send.send(renderer);
+        game_send.send(renderer.clone_empty()).unwrap(); // double-buffering renderers
+        game_send.send(renderer).unwrap();
 
         std::thread::spawn(|| game_loop(game, game_recv, game_send));
 
         'main: loop {
-            let renderer = dev_recv.recv();
+            let renderer = match dev_recv.recv() {
+                Ok(r) => r,
+                Err(_) => break 'main,
+            };
             // quit when Esc is pressed.
             for event in window.poll_events() {
                 match event {
-                    glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape), _) => break 'main,
+                    glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) => break 'main,
                     glutin::Event::Closed => break 'main,
                     _ => ev_send.process_glutin(event),
                 }
             }
             device.submit(renderer.as_buffer());
-            dev_send.send(renderer);
+            dev_send.send(renderer).unwrap();
             window.swap_buffers();
             device.after_frame();
         }

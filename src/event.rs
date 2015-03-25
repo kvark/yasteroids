@@ -29,23 +29,23 @@ impl SenderHub {
         use glutin::Event::KeyboardInput;
         use glutin::{ElementState, VirtualKeyCode};
         match event {
-            KeyboardInput(state, _, Some(VirtualKeyCode::A), _) =>
+            KeyboardInput(state, _, Some(VirtualKeyCode::A)) =>
                 self.control.send(EvThrust(match state {
                     ElementState::Pressed => 1.0,
                     ElementState::Released => 0.0,
-                })),
-            KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Left), _) =>
-                self.control.send(EvTurn(-1.0)),
-            KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Right), _) =>
-                self.control.send(EvTurn(1.0)),
-            KeyboardInput(ElementState::Released, _, Some(k), _)
+                })).unwrap(),
+            KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Left)) =>
+                self.control.send(EvTurn(-1.0)).unwrap(),
+            KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Right)) =>
+                self.control.send(EvTurn(1.0)).unwrap(),
+            KeyboardInput(ElementState::Released, _, Some(k))
                 if k == VirtualKeyCode::Left || k == VirtualKeyCode::Right =>
-                self.control.send(EvTurn(0.0)),
-            KeyboardInput(state, _, Some(VirtualKeyCode::S), _) =>
+                self.control.send(EvTurn(0.0)).unwrap(),
+            KeyboardInput(state, _, Some(VirtualKeyCode::S)) =>
                 self.bullet.send(EvShoot(match state {
                     ElementState::Pressed => true,
                     ElementState::Released => false,
-                })),
+                })).unwrap(),
             _ => (),
         }
     }
@@ -59,19 +59,19 @@ impl SenderHub {
                 self.control.send(EvThrust(match state {
                     Action::Press | Action::Repeat => 1.0,
                     Action::Release => 0.0,
-                })),
+                })).unwrap(),
             WindowEvent::Key(Key::Left, _, Action::Press, _) =>
-                self.control.send(EvTurn(-1.0)),
+                self.control.send(EvTurn(-1.0)).unwrap(),
             WindowEvent::Key(Key::Right, _, Action::Press, _) =>
-                self.control.send(EvTurn(1.0)),
+                self.control.send(EvTurn(1.0)).unwrap(),
             WindowEvent::Key(k, _, Action::Release, _)
                 if k == Key::Left || k == Key::Right =>
-                self.control.send(EvTurn(0.0)),
+                self.control.send(EvTurn(0.0)).unwrap(),
             WindowEvent::Key(Key::S, _, state, _) =>
                 self.bullet.send(EvShoot(match state {
                     Action::Press | Action::Repeat => true,
                     Action::Release => false,
-                })),
+                })).unwrap(),
             _ => (),
         }
     }

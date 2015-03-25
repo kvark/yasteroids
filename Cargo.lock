@@ -11,6 +11,7 @@ dependencies = [
  "glutin 0.0.13 (git+https://github.com/tomaka/gl-init-rs.git)",
  "id 0.0.1 (git+https://github.com/kvark/simplecs)",
  "log 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -44,7 +45,7 @@ dependencies = [
 [[package]]
 name = "ecs"
 version = "0.0.1"
-source = "git+https://github.com/kvark/simplecs#f81e5ef74d84030a3d7963bf0d03521833d8d421"
+source = "git+https://github.com/kvark/simplecs#7025ba5bf66e890e4c6ca0084b35ac2c05711642"
 
 [[package]]
 name = "gcc"
@@ -178,7 +179,7 @@ dependencies = [
 [[package]]
 name = "id"
 version = "0.0.1"
-source = "git+https://github.com/kvark/simplecs#f81e5ef74d84030a3d7963bf0d03521833d8d421"
+source = "git+https://github.com/kvark/simplecs#7025ba5bf66e890e4c6ca0084b35ac2c05711642"
 
 [[package]]
 name = "kernel32-sys"
