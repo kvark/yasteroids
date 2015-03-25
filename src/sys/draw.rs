@@ -2,13 +2,13 @@ use gfx;
 use world as w;
 
 pub struct System {
-    extents: [f32, ..2],
+    extents: [f32; ..2],
     pub frame: gfx::Frame,
     pub context: gfx::batch::Context,
 }
 
 impl System {
-    pub fn new(extents: [f32, ..2], frame: gfx::Frame) -> System {
+    pub fn new(extents: [f32; ..2], frame: gfx::Frame) -> System {
         System {
             extents: extents,
             frame: frame,
@@ -25,7 +25,7 @@ impl w::System for System {
             depth: 1.0,
             stencil: 0,
         };
-        renderer.clear(clear_data, gfx::Color, &self.frame);
+        renderer.clear(clear_data, gfx::COLOR, &self.frame);
         let mut param = w::ShaderParam {
             transform: [0.0, 0.0, 0.0, 1.0],
             screen_scale: [1.0 / self.extents[0], 1.0 / self.extents[1], 0.0, 0.0],

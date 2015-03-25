@@ -1,5 +1,6 @@
+use std::sync::mpsc;
 use cgmath::{Angle, Rad, Point, Vector};
-use ecs;
+use id::Id;
 use world as w;
 
 pub enum Event {
@@ -7,18 +8,18 @@ pub enum Event {
 }
 
 pub struct System {
-    input: Receiver<Event>,
+    input: mpsc::Receiver<Event>,
     shoot: bool,
-    ship_space_id: ecs::Id<w::Spatial>,
-    ship_inertia_id: ecs::Id<w::Inertial>,
-    draw_id: ecs::Id<w::Drawable>,
+    ship_space_id: Id<w::Spatial>,
+    ship_inertia_id: Id<w::Inertial>,
+    draw_id: Id<w::Drawable>,
     cool_time: f32,
     pool: Vec<w::Entity>,
 }
 
 impl System {
-    pub fn new(chan: Receiver<Event>, space_id: ecs::Id<w::Spatial>,
-               inertia_id: ecs::Id<w::Inertial>, draw_id: ecs::Id<w::Drawable>)
+    pub fn new(chan: mpsc::Receiver<Event>, space_id: Id<w::Spatial>,
+               inertia_id: Id<w::Inertial>, draw_id: Id<w::Drawable>)
                -> System {
         System {
             input: chan,
@@ -34,7 +35,7 @@ impl System {
     fn check_input(&mut self) {
         loop {
             match self.input.try_recv() {
-                Ok(EvShoot(value)) => self.shoot = value,
+                Ok(Event::EvShoot(value)) => self.shoot = value,
                 Err(_) => return,
             }
         }

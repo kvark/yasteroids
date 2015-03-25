@@ -1,27 +1,31 @@
-#[phase(plugin)]
-extern crate gfx_macros;
+#[plugin(gfx_macros)]
 
 use std::cmp;
+use std::marker::PhantomData;
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
 use gfx;
-use ecs;
+use gfx_device_gl;
+use id;
 
 pub type Delta = f32;
-pub type Params<'a, 'b> = &'a mut (Delta, &'b mut gfx::Renderer<gfx::GlCommandBuffer>);
+pub type Params<'a, 'b> = &'a mut (
+    Delta,
+    &'b mut gfx::Renderer<gfx_device_gl::GlResources, gfx_device_gl::GlCommandBuffer>
+);
 
-#[shader_param(Batch)]
-pub struct ShaderParam {
+#[shader_param]
+pub struct ShaderParam<R: gfx::Resources> {
     //TODO: hide these
-    pub transform: [f32, ..4],
-    pub screen_scale: [f32, ..4],
+    pub transform: [f32; ..4],
+    pub screen_scale: [f32; ..4],
+    _dummy: PhantomData<R>,
 }
 
 /// --- Components ---
 
-#[deriving(Clone)]
 pub type Drawable = Batch;
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Spatial {
     pub pos: Point2<f32>,
     pub orient: Rad<f32>,
@@ -35,43 +39,43 @@ impl Spatial {
     }
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Inertial {
     pub velocity: Vector2<f32>,
     pub angular_velocity: Rad<f32>,
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Control {
     pub thrust_speed: f32,
     pub turn_speed: f32,
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Bullet {
     pub life_time: Option<f32>,
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Asteroid {
-    pub kind: uint,
+    pub kind: u8,
 }
 
-#[deriving(Clone)]
+#[derive(Clone)]
 pub struct Collision {
     pub radius: f32,
-    pub health: uint,
-    pub damage: uint,
+    pub health: u16,
+    pub damage: u16,
 }
 
 impl Collision {
-    pub fn hit(&mut self, d: uint) {
+    pub fn hit(&mut self, d: u16) {
         self.health = cmp::max(self.health, d) - d;
     }
 }
 
 
-world! { ecs (Params),
+world! { id (Params),
     draw: Drawable,
     space: Spatial,
     inertia: Inertial,

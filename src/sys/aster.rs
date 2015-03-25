@@ -1,22 +1,22 @@
 use std::rand::{Rng, StdRng};
 use cgmath::{Angle, Deg, Rad, ToRad, Point, Point2, Vector, sin, cos};
-use ecs;
+use id::Id;
 use world as w;
 
-static KINDS: uint = 2;
+static KINDS: u8 = 2;
 
 pub struct System {
-    screen_ext: [f32, ..2],
+    screen_ext: [f32; ..2],
     spawn_radius: f32,
     rate: f32,
     time_left: w::Delta,
-    draw_id: ecs::Id<w::Drawable>,
-    pools: [Vec<w::Entity>, ..KINDS],
+    draw_id: Id<w::Drawable>,
+    pools: [Vec<w::Entity>; ..KINDS],
     rng: StdRng,
 }
 
 impl System {
-    pub fn new(extents: [f32, ..2], draw_id: ecs::Id<w::Drawable>) -> System {
+    pub fn new(extents: [f32; ..2], draw_id: Id<w::Drawable>) -> System {
         let radius = extents[0] + extents[1];
         System {
             screen_ext: extents,

@@ -10,6 +10,8 @@ dependencies = [
  "glfw 0.0.6 (git+https://github.com/bjz/glfw-rs.git)",
  "glutin 0.0.13 (git+https://github.com/tomaka/gl-init-rs.git)",
  "id 0.0.1 (git+https://github.com/kvark/simplecs)",
+ "log 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -33,7 +35,7 @@ dependencies = [
 
 [[package]]
 name = "draw_state"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -43,6 +45,11 @@ dependencies = [
 name = "ecs"
 version = "0.0.1"
 source = "git+https://github.com/kvark/simplecs#f81e5ef74d84030a3d7963bf0d03521833d8d421"
+
+[[package]]
+name = "gcc"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "gdi32-sys"
@@ -55,11 +62,11 @@ dependencies = [
 [[package]]
 name = "gfx"
 version = "0.2.4"
-source = "git+https://github.com/gfx-rs/gfx-rs#422e817575567bbe4bad188b32b70dba62531cc0"
+source = "git+https://github.com/gfx-rs/gfx-rs#5a27e935705c6c2bf109ddf13cddfaee4fd0b416"
 dependencies = [
  "bitflags 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "draw_state 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "draw_state 0.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -70,7 +77,7 @@ dependencies = [
  "gfx 0.2.4 (git+https://github.com/gfx-rs/gfx-rs)",
  "gfx_gl 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -87,7 +94,7 @@ dependencies = [
 [[package]]
 name = "gfx_macros"
 version = "0.1.9"
-source = "git+https://github.com/gfx-rs/gfx_macros#e916610cb19b476efd9d2471e49eac88d58331bc"
+source = "git+https://github.com/gfx-rs/gfx_macros#b0f14a13a87c3d17455eb1ae7bd22e2d65423b39"
 
 [[package]]
 name = "gl_common"
@@ -103,7 +110,7 @@ version = "0.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "khronos_api 0.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "xml-rs 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -113,21 +120,21 @@ version = "0.0.6"
 source = "git+https://github.com/bjz/glfw-rs.git#399cef3fb2010f33a12a42399e9cb52e5c1ee65e"
 dependencies = [
  "bitflags 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "glfw-sys 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "glfw-sys 3.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "semver 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "glfw-sys"
-version = "3.1.0"
+version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "glutin"
 version = "0.0.13"
-source = "git+https://github.com/tomaka/gl-init-rs.git#8ad9d5fb4dfc373e69e5530961302b1990d898bf"
+source = "git+https://github.com/tomaka/gl-init-rs.git#8a463f664302d90fbe31800ec25afadb1cf6d7c3"
 dependencies = [
  "android_glue 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gdi32-sys 0.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -193,7 +200,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "log"
-version = "0.2.6"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "log"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -205,7 +217,7 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "libc 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -217,6 +229,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "semver"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "time"
+version = "0.1.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "gcc 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "user32-sys"

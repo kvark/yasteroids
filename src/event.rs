@@ -1,21 +1,22 @@
+use std::sync::mpsc;
 use glutin;
 use glfw;
 use sys;
 
 pub type ReceiverHub = (
-    Receiver<sys::control::Event>,
-    Receiver<sys::bullet::Event>
+    mpsc::Receiver<sys::control::Event>,
+    mpsc::Receiver<sys::bullet::Event>
 );
 
 pub struct SenderHub {
-    control: Sender<sys::control::Event>,
-    bullet: Sender<sys::bullet::Event>,
+    control: mpsc::Sender<sys::control::Event>,
+    bullet: mpsc::Sender<sys::bullet::Event>,
 }
 
 impl SenderHub {
     pub fn new() -> (SenderHub, ReceiverHub) {
-        let (sc, rc) = channel();
-        let (sb, rb) = channel();
+        let (sc, rc) = mpsc::channel();
+        let (sb, rb) = mpsc::channel();
         (SenderHub {
             control: sc,
             bullet: sb,
@@ -23,50 +24,53 @@ impl SenderHub {
     }
 
     pub fn process_glutin(&self, event: glutin::Event) {
-        use sys::control::{EvThrust, EvTurn};
-        use sys::bullet::{EvShoot};
+        use sys::control::Event::*;
+        use sys::bullet::Event::*;
+        use glutin::Event::KeyboardInput;
+        use glutin::{ElementState, VirtualKeyCode};
         match event {
-            glutin::KeyboardInput(state, _, Some(glutin::A), _) =>
+            KeyboardInput(state, _, Some(VirtualKeyCode::A), _) =>
                 self.control.send(EvThrust(match state {
-                    glutin::Pressed => 1.0,
-                    glutin::Released => 0.0,
+                    ElementState::Pressed => 1.0,
+                    ElementState::Released => 0.0,
                 })),
-            glutin::KeyboardInput(glutin::Pressed, _, Some(glutin::Left), _) =>
+            KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Left), _) =>
                 self.control.send(EvTurn(-1.0)),
-            glutin::KeyboardInput(glutin::Pressed, _, Some(glutin::Right), _) =>
+            KeyboardInput(ElementState::Pressed, _, Some(VirtualKeyCode::Right), _) =>
                 self.control.send(EvTurn(1.0)),
-            glutin::KeyboardInput(glutin::Released, _, Some(k), _)
-                if k == glutin::Left || k == glutin::Right =>
+            KeyboardInput(ElementState::Released, _, Some(k), _)
+                if k == VirtualKeyCode::Left || k == VirtualKeyCode::Right =>
                 self.control.send(EvTurn(0.0)),
-            glutin::KeyboardInput(state, _, Some(glutin::S), _) =>
+            KeyboardInput(state, _, Some(VirtualKeyCode::S), _) =>
                 self.bullet.send(EvShoot(match state {
-                    glutin::Pressed => true,
-                    glutin::Released => false,
+                    ElementState::Pressed => true,
+                    ElementState::Released => false,
                 })),
             _ => (),
         }
     }
 
     pub fn process_glfw(&self, event: glfw::WindowEvent) {
-        use sys::control::{EvThrust, EvTurn};
-        use sys::bullet::{EvShoot};
+        use sys::control::Event::*;
+        use sys::bullet::Event::*;
+        use glfw::{Action, Key, WindowEvent};
         match event {
-            glfw::KeyEvent(glfw::KeyA, _, state, _) =>
+            WindowEvent::Key(Key::A, _, state, _) =>
                 self.control.send(EvThrust(match state {
-                    glfw::Press | glfw::Repeat => 1.0,
-                    glfw::Release => 0.0,
+                    Action::Press | Action::Repeat => 1.0,
+                    Action::Release => 0.0,
                 })),
-            glfw::KeyEvent(glfw::KeyLeft, _, glfw::Press, _) =>
+            WindowEvent::Key(Key::Left, _, Action::Press, _) =>
                 self.control.send(EvTurn(-1.0)),
-            glfw::KeyEvent(glfw::KeyRight, _, glfw::Press, _) =>
+            WindowEvent::Key(Key::Right, _, Action::Press, _) =>
                 self.control.send(EvTurn(1.0)),
-            glfw::KeyEvent(k, _, glfw::Release, _)
-                if k == glfw::KeyLeft || k == glfw::KeyRight =>
+            WindowEvent::Key(k, _, Action::Release, _)
+                if k == Key::Left || k == Key::Right =>
                 self.control.send(EvTurn(0.0)),
-            glfw::KeyEvent(glfw::KeyS, _, state, _) =>
+            WindowEvent::Key(Key::S, _, state, _) =>
                 self.bullet.send(EvShoot(match state {
-                    glfw::Press | glfw::Repeat => true,
-                    glfw::Release => false,
+                    Action::Press | Action::Repeat => true,
+                    Action::Release => false,
                 })),
             _ => (),
         }

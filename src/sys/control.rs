@@ -1,3 +1,4 @@
+use std::sync::mpsc;
 use cgmath::{Angle, Rad, Point, Vector};
 use world as w;
 
@@ -7,13 +8,13 @@ pub enum Event {
 }
 
 pub struct System {
-    input: Receiver<Event>,
+    input: mpsc::Receiver<Event>,
     thrust: f32,
     turn: f32,
 }
 
 impl System {
-    pub fn new(chan: Receiver<Event>) -> System {
+    pub fn new(chan: mpsc::Receiver<Event>) -> System {
         System {
             input: chan,
             thrust: 0.0,
@@ -24,8 +25,8 @@ impl System {
     fn check_input(&mut self) {
         loop {
             match self.input.try_recv() {
-                Ok(EvThrust(v)) => self.thrust = v,
-                Ok(EvTurn(v)) => self.turn = v,
+                Ok(Event::EvThrust(v)) => self.thrust = v,
+                Ok(Event::EvTurn(v)) => self.turn = v,
                 Err(_) => return,
             }
         }
