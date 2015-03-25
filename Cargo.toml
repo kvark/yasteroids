@@ -36,6 +36,6 @@ git = "https://github.com/tomaka/gl-init-rs.git"
 git = "https://github.com/bjz/glfw-rs.git"
 
 [dependencies]
-log = "*"
+env_logger = "*"
 rand = "*"
 time = "*"

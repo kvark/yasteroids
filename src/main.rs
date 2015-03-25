@@ -9,6 +9,7 @@ extern crate glfw;
 extern crate id;
 #[macro_use]
 extern crate ecs;
+extern crate env_logger;
 extern crate rand;
 extern crate time;
 
@@ -54,6 +55,8 @@ Controls:
 ";
 
 fn main() {
+    env_logger::init().unwrap();
+
     let use_glfw = true;
     let title = "Asteroids example for #scene-rs";
     let (ev_send, ev_recv) = event::SenderHub::new();
