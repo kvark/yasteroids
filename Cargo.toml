@@ -1,7 +1,7 @@
 [package]
 
 name = "yasteroids"
-version = "0.1.0"
+version = "0.1.1"
 authors = [
 	"Dzmitry Malyshau <kvarkus@gmail.com>",
 ]
@@ -9,6 +9,9 @@ authors = [
 [[bin]]
 name = "yasteroids"
 path = "src/main.rs"
+
+[features]
+default = []
 
 [dependencies.id]
 git = "https://github.com/kvark/simplecs"
@@ -34,6 +37,7 @@ git = "https://github.com/tomaka/gl-init-rs.git"
 
 [dependencies.glfw]
 git = "https://github.com/bjz/glfw-rs.git"
+optional = true
 
 [dependencies]
 env_logger = "*"

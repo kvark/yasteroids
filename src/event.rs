@@ -1,5 +1,6 @@
 use std::sync::mpsc;
 use glutin;
+#[cfg(feature = "glfw")]
 use glfw;
 use sys;
 
@@ -50,6 +51,7 @@ impl SenderHub {
         }
     }
 
+    #[cfg(feature = "glfw")]
     pub fn process_glfw(&self, event: glfw::WindowEvent) {
         use sys::control::Event::*;
         use sys::bullet::Event::*;
