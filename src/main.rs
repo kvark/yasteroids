@@ -1,5 +1,5 @@
 #![feature(collections, core, custom_attribute, plugin)]
-#![plugin(gfx_macros)]
+#![plugin(gfx_macros, secs)]
 
 extern crate cgmath;
 extern crate gfx;
@@ -8,8 +8,6 @@ extern crate glutin;
 #[cfg(feature = "glfw")]
 extern crate glfw;
 extern crate id;
-#[macro_use]
-extern crate ecs;
 extern crate env_logger;
 extern crate rand;
 extern crate time;

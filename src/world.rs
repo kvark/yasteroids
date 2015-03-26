@@ -1,14 +1,9 @@
-#[plugin(gfx_macros)]
-
 use std::cmp;
 use std::marker::PhantomData;
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
 use gfx;
 use gfx_device_gl;
 use id;
-
-pub type Delta = f32;
-pub type Params<'a> = (Delta, &'a mut ::Renderer);
 
 #[shader_param]
 pub struct ShaderParam<R: gfx::Resources> {
@@ -81,8 +76,8 @@ impl Collision {
     }
 }
 
-
-world! { id (Params),
+#[secs(id)]
+pub struct Prototype {
     draw: Drawable,
     space: Spatial,
     inertia: Inertial,
@@ -90,4 +85,10 @@ world! { id (Params),
     bullet: Bullet,
     aster: Asteroid,
     collision: Collision,
+}
+
+pub type Delta = f32;
+
+pub trait System: Send {
+    fn process(&mut self, Delta, &mut ::Renderer, &mut Components, &mut Vec<Entity>);
 }

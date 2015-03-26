@@ -64,22 +64,22 @@ impl System {
                 *data.collision.get_mut(ent.collision.unwrap()) = collide;
                 ent
             },
-            None => {
-                let mut ent = data.add()
-                    .space(space)
-                    .inertia(inertia)
-                    .aster(aster)
-                    .collision(collide)
-                    .entity;
-                ent.draw = Some(self.draw_id);
-                ent
+            None => w::Entity {    
+                draw: Some(self.draw_id),
+                space: Some(data.space.add(space)),
+                inertia: Some(data.inertia.add(inertia)),
+                control: None,
+                bullet: None,
+                aster: Some(data.aster.add(aster)),
+                collision: Some(data.collision.add(collide)),
             },
         }
     }
 }
 
 impl w::System for System {
-    fn process(&mut self, &mut (time, _): &mut w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+    fn process(&mut self, time: w::Delta, _: &mut ::Renderer,
+               data: &mut w::Components, entities: &mut Vec<w::Entity>) {
         // cleanup
         let (new_entities, reserve): (Vec<_>, _) = entities.drain().partition(|e| {
             match (e.aster, e.space, e.collision) {

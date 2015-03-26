@@ -10,7 +10,8 @@ impl System {
 }
 
 impl w::System for System {
-	fn process(&mut self, _: &mut w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+	fn process(&mut self, _: w::Delta, _: &mut ::Renderer,
+			   data: &mut w::Components, entities: &mut Vec<w::Entity>) {
 		let mut ia = entities.iter();
 		loop {
 			let a = match ia.next() {

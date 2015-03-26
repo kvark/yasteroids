@@ -34,7 +34,8 @@ impl System {
 }
 
 impl w::System for System {
-    fn process(&mut self, &mut (time, _): &mut w::Params, data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+    fn process(&mut self, time: w::Delta, _: &mut ::Renderer,
+               data: &mut w::Components, entities: &mut Vec<w::Entity>) {
         self.check_input();
         for ent in entities.iter() {
             match (ent.control, ent.inertia) {

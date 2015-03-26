@@ -3,7 +3,7 @@
 name = "yasteroids"
 version = "0.1.1"
 authors = [
-	"Dzmitry Malyshau <kvarkus@gmail.com>",
+"Dzmitry Malyshau <kvarkus@gmail.com>",
 ]
 
 [[bin]]
@@ -16,8 +16,9 @@ default = []
 [dependencies.id]
 git = "https://github.com/kvark/simplecs"
 
-[dependencies.ecs]
+[dependencies.secs]
 git = "https://github.com/kvark/simplecs"
+plugin = true
 
 [dependencies.cgmath]
 git = "https://github.com/bjz/cgmath-rs"
@@ -27,7 +28,7 @@ git = "https://github.com/gfx-rs/gfx-rs"
 
 [dependencies.gfx_macros]
 git = "https://github.com/gfx-rs/gfx_macros"
-plugin = "true"
+plugin = true
 
 [dependencies.gfx_device_gl]
 git = "https://github.com/gfx-rs/gfx_device_gl"

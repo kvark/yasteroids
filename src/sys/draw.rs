@@ -19,8 +19,8 @@ impl System {
 }
 
 impl w::System for System {
-    fn process(&mut self, &mut (_, ref mut renderer): &mut w::Params, data: &mut w::Components,
-               entities: &mut Vec<w::Entity>) {
+    fn process(&mut self, _: w::Delta, renderer: &mut ::Renderer,
+               data: &mut w::Components, entities: &mut Vec<w::Entity>) {
         let clear_data = gfx::ClearData {
             color: [0.0, 0.0, 0.1, 0.0],
             depth: 1.0,

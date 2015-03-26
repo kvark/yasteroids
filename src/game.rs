@@ -26,6 +26,7 @@ impl Vertex {
 
 pub struct Game {
     world: world::World,
+    systems: Vec<Box<world::System>>,
     last_time: u64,
 }
 
@@ -71,27 +72,29 @@ impl Game {
         let mut state = gfx::DrawState::new();
         state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::Nothing);
         let batch = draw.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
-        data.add()
-            .draw(batch)
-            .space(world::Spatial {
+        world::Entity {
+            draw: Some(data.draw.add(batch)),
+            space: Some(data.space.add(world::Spatial {
                 pos: Point2::new(0.0, 0.0),
                 orient: Rad{ s: 0.0 },
                 scale: 1.0,
-            })
-            .inertia(world::Inertial {
+            })),
+            inertia: Some(data.inertia.add(world::Inertial {
                 velocity: Vector2::new(0.0, 0.0),
                 angular_velocity: Rad{ s:0.0 },
-            })
-            .control(world::Control {
+            })),
+            control: Some(data.control.add(world::Control {
                 thrust_speed: 4.0,
                 turn_speed: -90.0,
-            })
-            .collision(world::Collision {
+            })),
+            bullet: None,
+            aster: None,
+            collision: Some(data.collision.add(world::Collision {
                 radius: 0.2,
                 health: 3,
                 damage: 2,
-            })
-            .entity
+            })),
+        }
     }
 
     pub fn new(frame: gfx::Frame<gfx_device_gl::GlResources>,
@@ -128,15 +131,18 @@ impl Game {
         let (space_id, inertia_id) = (ship.space.unwrap(), ship.inertia.unwrap());
         // populate world and return
         w.entities.push(ship);
-        w.add_system(draw_system);
-        w.add_system(::sys::inertia::System);
-        w.add_system(::sys::control::System::new(ev_control));
-        w.add_system(::sys::bullet::System::new(ev_bullet,
-                space_id, inertia_id, bullet_draw_id));
-        w.add_system(::sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id));
-        w.add_system(::sys::physics::System::new());
+        let systems = vec![
+            Box::new(draw_system) as Box<world::System>,
+            Box::new(::sys::inertia::System),
+            Box::new(::sys::control::System::new(ev_control)),
+            Box::new(::sys::bullet::System::new(ev_bullet,
+                space_id, inertia_id, bullet_draw_id)),
+            Box::new(::sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id)),
+            Box::new(::sys::physics::System::new()),
+        ];
         Game {
             world: w,
+            systems: systems,
             last_time: time::precise_time_ns(),
         }
     }
@@ -145,7 +151,9 @@ impl Game {
         let new_time = time::precise_time_ns();
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;
-        self.world.update(&mut (delta, renderer));
+        for sys in self.systems.iter_mut() {
+            sys.process(delta, renderer, &mut self.world.data, &mut self.world.entities);
+        }
     }
 
     pub fn is_alive(&self) -> bool {
