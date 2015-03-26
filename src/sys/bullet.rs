@@ -1,5 +1,6 @@
 use std::sync::mpsc;
 use cgmath::{Angle, Rad, Point, Vector};
+use gfx;
 use id::Id;
 use world as w;
 
@@ -7,20 +8,20 @@ pub enum Event {
     EvShoot(bool),
 }
 
-pub struct System {
+pub struct System<R: gfx::Resources> {
     input: mpsc::Receiver<Event>,
     shoot: bool,
     ship_space_id: Id<w::Spatial>,
     ship_inertia_id: Id<w::Inertial>,
-    draw_id: Id<w::Drawable>,
+    draw_id: Id<w::Drawable<R>>,
     cool_time: f32,
-    pool: Vec<w::Entity>,
+    pool: Vec<w::Entity<R>>,
 }
 
-impl System {
+impl<R: gfx::Resources> System<R> {
     pub fn new(chan: mpsc::Receiver<Event>, space_id: Id<w::Spatial>,
-               inertia_id: Id<w::Inertial>, draw_id: Id<w::Drawable>)
-               -> System {
+               inertia_id: Id<w::Inertial>, draw_id: Id<w::Drawable<R>>)
+               -> System<R> {
         System {
             input: chan,
             shoot: false,
@@ -42,9 +43,9 @@ impl System {
     }
 }
 
-impl w::System for System {
-    fn process(&mut self, time: w::Delta, _: &mut ::Renderer,
-               data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+impl<R: gfx::Resources + Send, C: gfx::CommandBuffer<R>> w::System<R, C> for System<R> {
+    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>,
+               data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
         self.check_input();
         self.cool_time = if self.cool_time > time {self.cool_time - time} else {0.0};
         if self.shoot && self.cool_time <= 0.0 {

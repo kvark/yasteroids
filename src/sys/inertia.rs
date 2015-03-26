@@ -1,11 +1,12 @@
 use cgmath::{Angle, Point, Vector};
+use gfx;
 use world as w;
 
 pub struct System;
 
-impl w::System for System {
-    fn process(&mut self, time: w::Delta, _: &mut ::Renderer,
-               data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> w::System<R, C> for System {
+    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>,
+               data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
         for ent in entities.iter() {
             ent.space.map(|s_id| {
                 let s = data.space.get_mut(s_id);

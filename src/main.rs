@@ -27,10 +27,10 @@ mod sys {
     pub mod physics;
 }
 
-pub type Renderer = gfx::Renderer<gfx_device_gl::GlResources, gfx_device_gl::CommandBuffer>;
-
-fn game_loop(mut game: game::Game, ren_recv: mpsc::Receiver<Renderer>,
-             ren_end: mpsc::Sender<Renderer>) {
+fn game_loop<R: gfx::Resources + Send + 'static, C: gfx::CommandBuffer<R> + Send>(
+             mut game: game::Game<R, C>,
+             ren_recv: mpsc::Receiver<gfx::Renderer<R, C>>,
+             ren_end: mpsc::Sender<gfx::Renderer<R, C>>) {
     while game.is_alive() {
         let mut renderer = match ren_recv.recv() {
             Ok(r) => r,
@@ -78,7 +78,7 @@ fn main() {
 
     let (w, h) = window.get_framebuffer_size();
     let frame = gfx::Frame::new(w as u16, h as u16);
-    let game = game::Game::new(frame, ev_recv, &mut device);
+    let game = game::Game::new(&mut device, ev_recv, frame);
 
     let renderer = device.create_renderer();
     game_send.send(renderer.clone_empty()).unwrap(); // double-buffering renderers
@@ -130,7 +130,7 @@ fn main() {
 
     let (w, h) = window.get_inner_size().unwrap();
     let frame = gfx::Frame::new(w as u16, h as u16);
-    let game = game::Game::new(frame, ev_recv, &mut device);
+    let game = game::Game::new(&mut device, ev_recv, frame);
 
     let renderer = device.create_renderer();
     game_send.send(renderer.clone_empty()).unwrap(); // double-buffering renderers

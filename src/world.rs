@@ -2,7 +2,6 @@ use std::cmp;
 use std::marker::PhantomData;
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
 use gfx;
-use gfx_device_gl;
 use id;
 
 #[shader_param]
@@ -25,7 +24,7 @@ impl<R: gfx::Resources> ShaderParam<R> {
 
 /// --- Components ---
 
-pub type Drawable = gfx::batch::RefBatch<ShaderParam<gfx_device_gl::GlResources>>;
+pub type Drawable<R: gfx::Resources> = gfx::batch::RefBatch<ShaderParam<R>>;
 
 #[derive(Clone)]
 pub struct Spatial {
@@ -77,8 +76,8 @@ impl Collision {
 }
 
 #[secs(id)]
-pub struct Prototype {
-    draw: Drawable,
+pub struct Prototype<R: gfx::Resources> {
+    draw: Drawable<R>,
     space: Spatial,
     inertia: Inertial,
     control: Control,
@@ -89,6 +88,6 @@ pub struct Prototype {
 
 pub type Delta = f32;
 
-pub trait System: Send {
-    fn process(&mut self, Delta, &mut ::Renderer, &mut Components, &mut Vec<Entity>);
+pub trait System<R: gfx::Resources, C: gfx::CommandBuffer<R>>: Send {
+    fn process(&mut self, Delta, &mut gfx::Renderer<R, C>, &mut Components<R>, &mut Vec<Entity<R>>);
 }

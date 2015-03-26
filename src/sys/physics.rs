@@ -1,4 +1,5 @@
 use cgmath::{Point, EuclideanVector};
+use gfx;
 use world as w;
 
 pub struct System;
@@ -9,9 +10,9 @@ impl System {
 	}
 }
 
-impl w::System for System {
-	fn process(&mut self, _: w::Delta, _: &mut ::Renderer,
-			   data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> w::System<R, C> for System {
+	fn process(&mut self, _: w::Delta, _: &mut gfx::Renderer<R, C>,
+			   data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
 		let mut ia = entities.iter();
 		loop {
 			let a = match ia.next() {

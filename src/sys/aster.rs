@@ -1,22 +1,23 @@
 use rand::{Rng, StdRng};
 use cgmath::{Angle, Deg, Rad, ToRad, Point, Point2, Vector, sin, cos};
+use gfx;
 use id::Id;
 use world as w;
 
 const KINDS: usize = 2;
 
-pub struct System {
+pub struct System<R: gfx::Resources> {
     screen_ext: [f32; 2],
     spawn_radius: f32,
     rate: f32,
     time_left: w::Delta,
-    draw_id: Id<w::Drawable>,
-    pools: [Vec<w::Entity>; KINDS],
+    draw_id: Id<w::Drawable<R>>,
+    pools: [Vec<w::Entity<R>>; KINDS],
     rng: StdRng,
 }
 
-impl System {
-    pub fn new(extents: [f32; 2], draw_id: Id<w::Drawable>) -> System {
+impl<R: gfx::Resources> System<R> {
+    pub fn new(extents: [f32; 2], draw_id: Id<w::Drawable<R>>) -> System<R> {
         let radius = extents[0] + extents[1];
         System {
             screen_ext: extents,
@@ -29,7 +30,7 @@ impl System {
         }
     }
 
-    fn spawn(&mut self, data: &mut w::Components) -> w::Entity {
+    fn spawn(&mut self, data: &mut w::Components<R>) -> w::Entity<R> {
         let origin_angle = Deg{ s: self.rng.gen_range(0f32, 360f32) }.to_rad();
         let origin_pos = Point2::new(
             self.spawn_radius * cos(origin_angle),
@@ -77,9 +78,9 @@ impl System {
     }
 }
 
-impl w::System for System {
-    fn process(&mut self, time: w::Delta, _: &mut ::Renderer,
-               data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+impl<R: gfx::Resources + Send, C: gfx::CommandBuffer<R>> w::System<R, C> for System<R> {
+    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>,
+               data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
         // cleanup
         let (new_entities, reserve): (Vec<_>, _) = entities.drain().partition(|e| {
             match (e.aster, e.space, e.collision) {

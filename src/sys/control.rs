@@ -1,5 +1,6 @@
 use std::sync::mpsc;
 use cgmath::{Angle, Rad, Point, Vector};
+use gfx;
 use world as w;
 
 pub enum Event {
@@ -33,9 +34,9 @@ impl System {
     }
 }
 
-impl w::System for System {
-    fn process(&mut self, time: w::Delta, _: &mut ::Renderer,
-               data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> w::System<R, C> for System {
+    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>,
+               data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
         self.check_input();
         for ent in entities.iter() {
             match (ent.control, ent.inertia) {

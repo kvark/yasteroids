@@ -1,15 +1,14 @@
 use gfx;
-use gfx_device_gl::GlResources;
 use world as w;
 
-pub struct System {
+pub struct System<R: gfx::Resources> {
     extents: [f32; 2],
-    pub frame: gfx::Frame<GlResources>,
-    pub context: gfx::batch::Context<GlResources>,
+    pub frame: gfx::Frame<R>,
+    pub context: gfx::batch::Context<R>,
 }
 
-impl System {
-    pub fn new(extents: [f32; 2], frame: gfx::Frame<GlResources>) -> System {
+impl<R: gfx::Resources> System<R> {
+    pub fn new(extents: [f32; 2], frame: gfx::Frame<R>) -> System<R> {
         System {
             extents: extents,
             frame: frame,
@@ -18,9 +17,9 @@ impl System {
     }
 }
 
-impl w::System for System {
-    fn process(&mut self, _: w::Delta, renderer: &mut ::Renderer,
-               data: &mut w::Components, entities: &mut Vec<w::Entity>) {
+impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> w::System<R, C> for System<R> {
+    fn process(&mut self, _: w::Delta, renderer: &mut gfx::Renderer<R, C>,
+               data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
         let clear_data = gfx::ClearData {
             color: [0.0, 0.0, 0.1, 0.0],
             depth: 1.0,
