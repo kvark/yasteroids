@@ -53,7 +53,7 @@ Controls:
 ";
 
 #[cfg(feature = "glfw")]
-fn main() {
+pub fn main() {
     use glfw::Context;
     env_logger::init().unwrap();
     println!("{}", USAGE);
@@ -111,7 +111,7 @@ fn main() {
 }
 
 #[cfg(not(feature = "glfw"))]
-fn main() {
+pub fn main() {
     env_logger::init().unwrap();
     println!("{}", USAGE);
 

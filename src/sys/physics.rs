@@ -1,5 +1,6 @@
 use cgmath::{Point, EuclideanVector};
 use gfx;
+use id::Storage;
 use world as w;
 
 pub struct System;

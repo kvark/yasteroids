@@ -1,4 +1,5 @@
 use time;
+use id::Storage;
 use cgmath::{Rad, Point2, Vector2};
 use gfx;
 use gfx::traits::*;

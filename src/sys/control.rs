@@ -1,6 +1,7 @@
 use std::sync::mpsc;
 use cgmath::{Angle, Rad, Point, Vector};
 use gfx;
+use id::Storage;
 use world as w;
 
 pub enum Event {

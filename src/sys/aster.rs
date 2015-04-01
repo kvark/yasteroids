@@ -1,7 +1,7 @@
 use rand::{Rng, StdRng};
 use cgmath::{Angle, Deg, Rad, ToRad, Point, Point2, Vector, sin, cos};
 use gfx;
-use id::Id;
+use id::{Id, Storage};
 use world as w;
 
 const KINDS: usize = 2;
