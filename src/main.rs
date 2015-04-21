@@ -1,9 +1,9 @@
-#![feature(collections, core, custom_attribute, plugin)]
+#![feature(collections, custom_attribute, plugin)]
 #![plugin(gfx_macros, secs)]
 
 extern crate cgmath;
 extern crate gfx;
-extern crate gfx_device_gl;
+extern crate gfx_window_glutin;
 extern crate glutin;
 #[cfg(feature = "glfw")]
 extern crate glfw;
@@ -12,7 +12,7 @@ extern crate env_logger;
 extern crate rand;
 extern crate time;
 
-use std::sync::mpsc;
+use std::sync::{Arc, Mutex, mpsc};
 use gfx::traits::*;
 
 mod event;
@@ -27,17 +27,22 @@ mod sys {
     pub mod physics;
 }
 
-fn game_loop<R: gfx::Resources + Send + 'static, C: gfx::CommandBuffer<R> + Send>(
-             mut game: game::Game<R, C>,
-             ren_recv: mpsc::Receiver<gfx::Renderer<R, C>>,
-             ren_end: mpsc::Sender<gfx::Renderer<R, C>>) {
+fn game_loop<
+    R: gfx::Resources + Send + 'static,
+    C: gfx::CommandBuffer<R> + Send,
+    O: gfx::Output<R>,
+>(  mut game: game::Game<R, C, O>,
+    output: Arc<Mutex<O>>,
+    ren_recv: mpsc::Receiver<gfx::Renderer<R, C>>,
+    ren_end: mpsc::Sender<gfx::Renderer<R, C>>)
+{
     while game.is_alive() {
         let mut renderer = match ren_recv.recv() {
             Ok(r) => r,
             Err(_) => break,
         };
         renderer.reset();
-        game.render(&mut renderer);
+        game.render(&mut renderer, &*output.lock().unwrap());
         match ren_end.send(renderer) {
             Ok(_) => (),
             Err(_) => break,
@@ -122,29 +127,28 @@ pub fn main() {
 
     let window = glutin::WindowBuilder::new()
         .with_title(title.to_string())
-        .with_gl_version((3,2))
+        .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 2)))
         .build().unwrap();
 
-    unsafe { window.make_current() };
-    let mut device = gfx_device_gl::GlDevice::new(|s| window.get_proc_address(s));
+    let (output, mut device, mut factory) = gfx_window_glutin::init(window);
+    let game = game::Game::new(&mut factory, ev_recv);
+    let output = Arc::new(Mutex::new(output));
 
-    let (w, h) = window.get_inner_size().unwrap();
-    let frame = gfx::Frame::new(w as u16, h as u16);
-    let game = game::Game::new(&mut device, ev_recv, frame);
-
-    let renderer = device.create_renderer();
+    let renderer = factory.create_renderer();
     game_send.send(renderer.clone_empty()).unwrap(); // double-buffering renderers
     game_send.send(renderer).unwrap();
 
-    std::thread::spawn(|| game_loop(game, game_recv, game_send));
+    let o2 = output.clone();
+    std::thread::spawn(move || game_loop(game, o2, game_recv, game_send));
 
     'main: loop {
+        use gfx::Window;
         let renderer = match dev_recv.recv() {
             Ok(r) => r,
             Err(_) => break 'main,
         };
         // quit when Esc is pressed.
-        for event in window.poll_events() {
+        for event in output.lock().unwrap().window.poll_events() {
             match event {
                 glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) => break 'main,
                 glutin::Event::Closed => break 'main,
@@ -153,7 +157,8 @@ pub fn main() {
         }
         device.submit(renderer.as_buffer());
         dev_send.send(renderer).unwrap();
-        window.swap_buffers();
+        output.lock().unwrap().swap_buffers();
         device.after_frame();
+        factory.cleanup();
     }
 }

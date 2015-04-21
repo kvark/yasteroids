@@ -43,8 +43,8 @@ impl<R: gfx::Resources> System<R> {
     }
 }
 
-impl<R: gfx::Resources + Send, C: gfx::CommandBuffer<R>> w::System<R, C> for System<R> {
-    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>,
+impl<R: gfx::Resources + Send, C: gfx::CommandBuffer<R>, O> w::System<R, C, O> for System<R> {
+    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>, _: &O,
                data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
         self.check_input();
         self.cool_time = if self.cool_time > time {self.cool_time - time} else {0.0};

@@ -88,6 +88,6 @@ pub struct Prototype<R: gfx::Resources> {
 
 pub type Delta = f32;
 
-pub trait System<R: gfx::Resources, C: gfx::CommandBuffer<R>>: Send {
-    fn process(&mut self, Delta, &mut gfx::Renderer<R, C>, &mut Components<R>, &mut Vec<Entity<R>>);
+pub trait System<R: gfx::Resources, C: gfx::CommandBuffer<R>, O>: Send {
+    fn process(&mut self, Delta, &mut gfx::Renderer<R, C>, &O, &mut Components<R>, &mut Vec<Entity<R>>);
 }

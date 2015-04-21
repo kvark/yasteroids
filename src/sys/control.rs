@@ -35,8 +35,8 @@ impl System {
     }
 }
 
-impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> w::System<R, C> for System {
-    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>,
+impl<R: gfx::Resources, C: gfx::CommandBuffer<R>, O> w::System<R, C, O> for System {
+    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>, _: &O,
                data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
         self.check_input();
         for ent in entities.iter() {

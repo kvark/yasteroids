@@ -7,7 +7,7 @@ use world;
 
 const SCREEN_EXTENTS: [f32; 2] = [10.0, 10.0];
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 #[vertex_format]
 struct Vertex {
     pos: [f32; 2],
@@ -24,9 +24,9 @@ impl Vertex {
     }
 }
 
-pub struct Game<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
+pub struct Game<R: gfx::Resources, C: gfx::CommandBuffer<R>, O> {
     world: world::World<R>,
-    systems: Vec<Box<world::System<R, C>>>,
+    systems: Vec<Box<world::System<R, C, O>>>,
     last_time: u64,
 }
 
@@ -98,10 +98,14 @@ fn create_ship<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F,
     }
 }
 
-impl<R: gfx::Resources + Send + 'static, C: gfx::CommandBuffer<R>> Game<R, C> {
+impl<
+    R: gfx::Resources + Send + 'static,
+    C: gfx::CommandBuffer<R>,
+    O: gfx::Output<R>
+> Game<R, C, O> {
     pub fn new<F: gfx::Factory<R>>(factory: &mut F,
-               (ev_control, ev_bullet): ::event::ReceiverHub,
-               frame: gfx::Frame<R>) -> Game<R, C> where
+               (ev_control, ev_bullet): ::event::ReceiverHub)
+               -> Game<R, C, O> where
         R::Buffer: 'static,
         R::ArrayBuffer: 'static,
         R::Shader: 'static,
@@ -114,7 +118,7 @@ impl<R: gfx::Resources + Send + 'static, C: gfx::CommandBuffer<R>> Game<R, C> {
         let mut w = world::World::new();
         // prepare systems
         let program = create_program(factory);
-        let mut draw_system = ::sys::draw::System::new(SCREEN_EXTENTS, frame);
+        let mut draw_system = ::sys::draw::System::new(SCREEN_EXTENTS);
         let bullet_draw_id = {
             let mesh = factory.create_mesh(&[
                 Vertex::new(0.0, 0.0, 0xFF808000),
@@ -143,7 +147,7 @@ impl<R: gfx::Resources + Send + 'static, C: gfx::CommandBuffer<R>> Game<R, C> {
         // populate world and return
         w.entities.push(ship);
         let systems = vec![
-            Box::new(draw_system) as Box<world::System<R, C>>,
+            Box::new(draw_system) as Box<world::System<R, C, O>>,
             Box::new(::sys::inertia::System),
             Box::new(::sys::control::System::new(ev_control)),
             Box::new(::sys::bullet::System::new(ev_bullet,
@@ -158,12 +162,12 @@ impl<R: gfx::Resources + Send + 'static, C: gfx::CommandBuffer<R>> Game<R, C> {
         }
     }
 
-    pub fn render(&mut self, renderer: &mut gfx::Renderer<R, C>) {
+    pub fn render(&mut self, renderer: &mut gfx::Renderer<R, C>, output: &O) {
         let new_time = time::precise_time_ns();
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;
         for sys in self.systems.iter_mut() {
-            sys.process(delta, renderer, &mut self.world.data, &mut self.world.entities);
+            sys.process(delta, renderer, output, &mut self.world.data, &mut self.world.entities);
         }
     }
 

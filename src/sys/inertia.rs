@@ -5,8 +5,8 @@ use world as w;
 
 pub struct System;
 
-impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> w::System<R, C> for System {
-    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>,
+impl<R: gfx::Resources, C: gfx::CommandBuffer<R>, O> w::System<R, C, O> for System {
+    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>, _: &O,
                data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
         for ent in entities.iter() {
             ent.space.map(|s_id| {
