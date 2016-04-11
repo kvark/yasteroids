@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use cgmath::{Angle, Rad, Point, Vector};
+use parsec::Scheduler;
 use gfx;
-use id::Storage;
 use world as w;
 
 pub enum Event {
@@ -35,10 +35,10 @@ impl System {
     }
 }
 
-impl<R: gfx::Resources, C: gfx::CommandBuffer<R>, O> w::System<R, C, O> for System {
-    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>, _: &O,
-               data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
+impl super::System for System {
+    fn process(&mut self, sh: &Scheduler, time: super::Delta) {
         self.check_input();
+        /* TODO
         for ent in entities.iter() {
             match (ent.control, ent.inertia) {
                 (Some(c_id), Some(i_id)) => {
@@ -58,6 +58,6 @@ impl<R: gfx::Resources, C: gfx::CommandBuffer<R>, O> w::System<R, C, O> for Syst
                 },
                 (_, _) => (),
             }
-        }
+        }*/
     }
 }

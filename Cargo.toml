@@ -1,46 +1,20 @@
 [package]
 
 name = "yasteroids"
-version = "0.1.2"
+version = "0.2.0"
 authors = [
 "Dzmitry Malyshau <kvarkus@gmail.com>",
 ]
 
-[[bin]]
-name = "yasteroids"
-path = "src/main.rs"
-
 [features]
 default = []
-
-[dependencies.id]
-git = "https://github.com/kvark/simplecs"
-
-[dependencies.secs]
-git = "https://github.com/kvark/simplecs"
-plugin = true
-
-[dependencies.cgmath]
-git = "https://github.com/bjz/cgmath-rs"
-
-[dependencies.glutin]
-git = "https://github.com/tomaka/glutin"
-
-[dependencies.glfw]
-git = "https://github.com/bjz/glfw-rs"
-optional = true
-
-[dependencies.gfx]
-git = "https://github.com/gfx-rs/gfx-rs"
-
-[dependencies.gfx_macros]
-git = "https://github.com/gfx-rs/gfx_macros"
-plugin = true
-
-[dependencies.gfx_window_glutin]
-git = "https://github.com/gfx-rs/gfx_window_glutin"
 
 [dependencies]
 env_logger = "*"
 rand = "*"
 time = "*"
+cgmath = "0.8"
+parsec = "0.3"
+gfx = "0.10"
+gfx_window_glutin = "0.10"
+glutin = "0.4"

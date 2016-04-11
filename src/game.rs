@@ -1,37 +1,36 @@
 use time;
-use id::Storage;
 use cgmath::{Rad, Point2, Vector2};
+use parsec;
 use gfx;
-use gfx::traits::*;
+use gfx::traits::FactoryExt;
+use sys;
 use world;
 
 const SCREEN_EXTENTS: [f32; 2] = [10.0, 10.0];
 
-#[derive(Clone, Copy)]
-#[vertex_format]
-struct Vertex {
-    pos: [f32; 2],
-    #[normalized]
-    color: [u8; 4],
-}
+gfx_vertex_struct!( Vertex {
+    pos: [f32; 2] = "a_Pos",
+    color: [gfx::format::U8Norm; 4] = "a_Color",
+});
 
 impl Vertex {
     fn new(x: f32, y: f32, col: u32) -> Vertex {
+        let c4 = [(col>>24) as u8, (col>>16) as u8, (col>>8) as u8, col as u8];
         Vertex {
             pos: [x, y],
-            color: [(col>>24) as u8, (col>>16) as u8, (col>>8) as u8, col as u8],
+            color: gfx::format::U8Norm::cast4(c4),
         }
     }
 }
 
-pub struct Game<R: gfx::Resources, C: gfx::CommandBuffer<R>, O> {
-    world: world::World<R>,
-    systems: Vec<Box<world::System<R, C, O>>>,
+pub struct Game {
+    scheduler: parsec::Scheduler,
+    systems: Vec<Box<sys::System>>,
     last_time: u64,
 }
 
 fn create_program<R: gfx::Resources, F: gfx::Factory<R>>(
-                  factory: &mut F) -> gfx::ProgramHandle<R>
+                  factory: &mut F) -> gfx::handle::Program<R>
 {
     factory.link_program(
         b"
@@ -60,20 +59,19 @@ fn create_program<R: gfx::Resources, F: gfx::Factory<R>>(
 }
 
 fn create_ship<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F,
-               data: &mut world::Components<R>, draw: &mut ::sys::draw::System<R>,
-               program: gfx::ProgramHandle<R>) -> world::Entity<R>
-
+               world: &parsec::World, program: gfx::handle::Program<R>)
+               -> parsec::Entity
 {
-    let mesh = factory.create_mesh(&[
+    let (vbuf, slice) = factory.create_vertex_buffer(&[
         Vertex::new(-0.3, -0.5, 0x20C02000),
         Vertex::new(0.3, -0.5,  0x20C02000),
         Vertex::new(0.0, 0.5,   0xC0404000),
     ]);
-    let slice = mesh.to_slice(gfx::PrimitiveType::TriangleList);
-    let mut state = gfx::DrawState::new();
-    state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::Nothing);
-    let batch = draw.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
-    world::Entity {
+    //state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::Nothing);
+    //let batch = draw.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
+    world.create_now()
+         .build()
+    /*world::Entity {
         draw: Some(data.draw.add(batch)),
         space: Some(data.space.add(world::Spatial {
             pos: Point2::new(0.0, 0.0),
@@ -95,30 +93,18 @@ fn create_ship<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F,
             health: 3,
             damage: 2,
         })),
-    }
+    }*/
 }
 
-impl<
-    R: gfx::Resources + Send + 'static,
-    C: gfx::CommandBuffer<R>,
-    O: gfx::Output<R>
-> Game<R, C, O> {
-    pub fn new<F: gfx::Factory<R>>(factory: &mut F,
+impl Game {
+    pub fn new<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F,
                (ev_control, ev_bullet): ::event::ReceiverHub)
-               -> Game<R, C, O> where
-        R::Buffer: 'static,
-        R::ArrayBuffer: 'static,
-        R::Shader: 'static,
-        R::Program: 'static,
-        R::FrameBuffer: 'static,
-        R::Surface: 'static,
-        R::Texture: 'static,
-        R::Sampler: 'static,
+               -> Game
     {
-        let mut w = world::World::new();
+        let mut w = parsec::World::new();
         // prepare systems
-        let program = create_program(factory);
-        let mut draw_system = ::sys::draw::System::new(SCREEN_EXTENTS);
+        /*let program = create_program(factory);
+        let mut draw_system = sys::draw::System::new(SCREEN_EXTENTS);
         let bullet_draw_id = {
             let mesh = factory.create_mesh(&[
                 Vertex::new(0.0, 0.0, 0xFF808000),
@@ -147,37 +133,40 @@ impl<
         // populate world and return
         w.entities.push(ship);
         let systems = vec![
-            Box::new(draw_system) as Box<world::System<R, C, O>>,
-            Box::new(::sys::inertia::System),
-            Box::new(::sys::control::System::new(ev_control)),
-            Box::new(::sys::bullet::System::new(ev_bullet,
+            Box::new(draw_system) as Box<worldsystem<R, C, O>>,
+            Box::new(sys::inertia::System),
+            Box::new(sys::control::System::new(ev_control)),
+            Box::new(sys::bullet::System::new(ev_bullet,
                 space_id, inertia_id, bullet_draw_id)),
-            Box::new(::sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id)),
-            Box::new(::sys::physics::System::new()),
-        ];
+            Box::new(sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id)),
+            Box::new(sys::physics::System::new()),
+        ];*/
+        let systems = vec![];
         Game {
-            world: w,
+            scheduler: parsec::Scheduler::new(w, 4),
             systems: systems,
             last_time: time::precise_time_ns(),
         }
     }
 
-    pub fn render(&mut self, renderer: &mut gfx::Renderer<R, C>, output: &O) {
+    pub fn render<R: gfx::Resources, C: gfx::CommandBuffer<R>>(&mut self, encoder: &mut gfx::Encoder<R, C>) {
         let new_time = time::precise_time_ns();
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;
         for sys in self.systems.iter_mut() {
-            sys.process(delta, renderer, output, &mut self.world.data, &mut self.world.entities);
+            sys.process(&self.scheduler, delta);
         }
     }
 
     pub fn is_alive(&self) -> bool {
+        /*
         self.world.entities.iter().find(|e| {
             match (e.control, e.collision) {
                 (Some(_), Some(o_id)) =>
                     self.world.data.collision.get(o_id).health != 0,
                 _ => false,
             }
-        }).is_some()
+        }).is_some()*/
+        true
     }
 }

@@ -1,49 +1,38 @@
-#![feature(collections, custom_attribute, plugin)]
-#![plugin(gfx_macros, secs)]
-
 extern crate cgmath;
+#[macro_use]
 extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate glutin;
-#[cfg(feature = "glfw")]
-extern crate glfw;
-extern crate id;
+#[macro_use]
+extern crate parsec;
 extern crate env_logger;
 extern crate rand;
 extern crate time;
 
 use std::sync::{Arc, Mutex, mpsc};
-use gfx::traits::*;
 
 mod event;
 mod game;
 mod world;
-mod sys {
-    pub mod aster;
-    pub mod bullet;
-    pub mod control;
-    pub mod draw;
-    pub mod inertia;
-    pub mod physics;
-}
+mod sys;
+
+type ColorFormat = gfx::format::Srgba8;
+type DepthFormat = gfx::format::Depth;
 
 fn game_loop<
     R: gfx::Resources + Send + 'static,
     C: gfx::CommandBuffer<R> + Send,
-    O: gfx::Output<R>,
->(  mut game: game::Game<R, C, O>,
-    output: Arc<Mutex<O>>,
-    ren_recv: mpsc::Receiver<gfx::Renderer<R, C>>,
-    ren_end: mpsc::Sender<gfx::Renderer<R, C>>)
+>(  mut game: game::Game,
+    ren_recv: mpsc::Receiver<gfx::Encoder<R, C>>,
+    ren_end: mpsc::Sender<gfx::Encoder<R, C>>)
 {
     while game.is_alive() {
-        let mut renderer = match ren_recv.recv() {
+        let mut encoder = match ren_recv.recv() {
             Ok(r) => r,
             Err(_) => break,
         };
-        renderer.reset();
-        game.render(&mut renderer, &*output.lock().unwrap());
-        match ren_end.send(renderer) {
+        game.render(&mut encoder);
+        match ren_end.send(encoder) {
             Ok(_) => (),
             Err(_) => break,
         }
@@ -57,65 +46,6 @@ Controls:
     Left/Right - turn
 ";
 
-#[cfg(feature = "glfw")]
-pub fn main() {
-    use glfw::Context;
-    env_logger::init().unwrap();
-    println!("{}", USAGE);
-
-    let title = "Asteroids example for #scene-rs";
-    let (ev_send, ev_recv) = event::SenderHub::new();
-    let (game_send, dev_recv) = mpsc::channel();
-    let (dev_send, game_recv) = mpsc::channel();
-
-    let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 2));
-    glfw.window_hint(glfw::WindowHint::OpenglProfile(glfw::OpenGlProfileHint::Core));
-    glfw.set_error_callback(glfw::FAIL_ON_ERRORS);
-
-    let (mut window, events) = glfw
-        .create_window(640, 480, title, glfw::WindowMode::Windowed)
-        .expect("Failed to create GLFW window.");
-
-    window.make_current();
-    window.set_key_polling(true); // so we can quit when Esc is pressed
-    let mut device = gfx_device_gl::GlDevice::new(|s| glfw.get_proc_address(s));
-
-    let (w, h) = window.get_framebuffer_size();
-    let frame = gfx::Frame::new(w as u16, h as u16);
-    let game = game::Game::new(&mut device, ev_recv, frame);
-
-    let renderer = device.create_renderer();
-    game_send.send(renderer.clone_empty()).unwrap(); // double-buffering renderers
-    game_send.send(renderer).unwrap();
-
-    std::thread::spawn(|| game_loop(game, game_recv, game_send));
-
-    while !window.should_close() {
-        let renderer = match dev_recv.recv() {
-            Ok(r) => r,
-            Err(_) => break,
-        };
-        glfw.poll_events();
-        // quit when Esc is pressed.
-        for (_, event) in glfw::flush_messages(&events) {
-            match event {
-                glfw::WindowEvent::Key(glfw::Key::Escape, _, glfw::Action::Press, _) =>
-                    window.set_should_close(true),
-                _ => ev_send.process_glfw(event),
-            }
-        }
-        device.submit(renderer.as_buffer());
-        match dev_send.send(renderer) {
-            Ok(_) => (),
-            Err(_) => break,
-        }
-        window.swap_buffers();
-        device.after_frame();
-    }
-}
-
-#[cfg(not(feature = "glfw"))]
 pub fn main() {
     env_logger::init().unwrap();
     println!("{}", USAGE);
@@ -125,40 +55,38 @@ pub fn main() {
     let (game_send, dev_recv) = mpsc::channel();
     let (dev_send, game_recv) = mpsc::channel();
 
-    let window = glutin::WindowBuilder::new()
+    let builder = glutin::WindowBuilder::new()
         .with_title(title.to_string())
-        .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 2)))
-        .build().unwrap();
+        .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 2)));
+    let (window, mut device, mut factory, main_color, _main_depth) =
+        gfx_window_glutin::init::<ColorFormat, DepthFormat>(builder);
 
-    let (output, mut device, mut factory) = gfx_window_glutin::init(window);
     let game = game::Game::new(&mut factory, ev_recv);
-    let output = Arc::new(Mutex::new(output));
 
-    let renderer = factory.create_renderer();
-    game_send.send(renderer.clone_empty()).unwrap(); // double-buffering renderers
-    game_send.send(renderer).unwrap();
+    let enc: gfx::Encoder<_, _> = factory.create_command_buffer().into();
+    game_send.send(enc.clone_empty()).unwrap(); // double-buffering renderers
+    game_send.send(enc).unwrap();
 
-    let o2 = output.clone();
-    std::thread::spawn(move || game_loop(game, o2, game_recv, game_send));
+    std::thread::spawn(move || game_loop(game, game_recv, game_send));
 
     'main: loop {
-        use gfx::Window;
-        let renderer = match dev_recv.recv() {
+        use gfx::Device;
+        let mut encoder = match dev_recv.recv() {
             Ok(r) => r,
             Err(_) => break 'main,
         };
         // quit when Esc is pressed.
-        for event in output.lock().unwrap().window.poll_events() {
+        for event in window.poll_events() {
             match event {
                 glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) => break 'main,
                 glutin::Event::Closed => break 'main,
                 _ => ev_send.process_glutin(event),
             }
         }
-        device.submit(renderer.as_buffer());
-        dev_send.send(renderer).unwrap();
-        output.lock().unwrap().swap_buffers();
-        device.after_frame();
-        factory.cleanup();
+        // draw a frame
+        encoder.flush(&mut device);
+        dev_send.send(encoder).unwrap();
+        window.swap_buffers().unwrap();
+        device.cleanup();
     }
 }

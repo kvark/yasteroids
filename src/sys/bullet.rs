@@ -1,35 +1,32 @@
 use std::sync::mpsc;
 use cgmath::{Angle, Rad, Point, Vector};
 use gfx;
-use id::{Id, Storage};
 use world as w;
 
 pub enum Event {
     EvShoot(bool),
 }
 
-pub struct System<R: gfx::Resources> {
+pub struct System {
     input: mpsc::Receiver<Event>,
     shoot: bool,
-    ship_space_id: Id<w::Spatial>,
-    ship_inertia_id: Id<w::Inertial>,
-    draw_id: Id<w::Drawable<R>>,
+    //ship_space_id: Id<w::Spatial>,
+    //ship_inertia_id: Id<w::Inertial>,
+    //draw_id: Id<w::Drawable>,
     cool_time: f32,
-    pool: Vec<w::Entity<R>>,
 }
 
-impl<R: gfx::Resources> System<R> {
-    pub fn new(chan: mpsc::Receiver<Event>, space_id: Id<w::Spatial>,
-               inertia_id: Id<w::Inertial>, draw_id: Id<w::Drawable<R>>)
-               -> System<R> {
+impl System {
+    pub fn new(chan: mpsc::Receiver<Event>)
+               -> System
+    {
         System {
             input: chan,
             shoot: false,
-            ship_space_id: space_id,
-            ship_inertia_id: inertia_id,
-            draw_id: draw_id,
+            //ship_space_id: space_id,
+            //ship_inertia_id: inertia_id,
+            //draw_id: draw_id,
             cool_time: 1.0,
-            pool: Vec::new(),
         }
     }
 
@@ -43,6 +40,7 @@ impl<R: gfx::Resources> System<R> {
     }
 }
 
+/* TODO
 impl<R: gfx::Resources + Send, C: gfx::CommandBuffer<R>, O> w::System<R, C, O> for System<R> {
     fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>, _: &O,
                data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
@@ -117,3 +115,4 @@ impl<R: gfx::Resources + Send, C: gfx::CommandBuffer<R>, O> w::System<R, C, O> f
         self.pool.extend(reserve);
     }
 }
+*/
