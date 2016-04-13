@@ -5,10 +5,10 @@ pub mod control;
 //pub mod inertia;
 //pub mod physics;
 
-use parsec::Scheduler;
+use specs::Planner;
 
 pub type Delta = f32;
 
 pub trait System: Send {
-    fn process(&mut self, &Scheduler, Delta);
+    fn process(&mut self, &Planner, Delta);
 }

@@ -7,8 +7,8 @@ dependencies = [
  "gfx 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "gfx_window_glutin 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glutin 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "parsec 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "specs 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -401,17 +401,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "parsec"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "fnv 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "mopa 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "pulse 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "threadpool 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "pulse"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -471,6 +460,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "winapi 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "specs"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "fnv 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mopa 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pulse 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "threadpool 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

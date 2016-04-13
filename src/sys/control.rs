@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 use cgmath::{Angle, Rad, Point, Vector};
-use parsec::Scheduler;
+use specs::Planner;
 use gfx;
 use world as w;
 
@@ -36,7 +36,7 @@ impl System {
 }
 
 impl super::System for System {
-    fn process(&mut self, sh: &Scheduler, time: super::Delta) {
+    fn process(&mut self, _: &Planner, time: super::Delta) {
         self.check_input();
         /* TODO
         for ent in entities.iter() {

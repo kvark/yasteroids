@@ -4,7 +4,7 @@ extern crate gfx;
 extern crate gfx_window_glutin;
 extern crate glutin;
 #[macro_use]
-extern crate parsec;
+extern crate specs;
 extern crate env_logger;
 extern crate rand;
 extern crate time;

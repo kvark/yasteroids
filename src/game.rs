@@ -1,6 +1,6 @@
 use time;
 use cgmath::{Rad, Point2, Vector2};
-use parsec;
+use specs;
 use gfx;
 use gfx::traits::FactoryExt;
 use sys;
@@ -24,7 +24,7 @@ impl Vertex {
 }
 
 pub struct Game {
-    scheduler: parsec::Scheduler,
+    planner: specs::Planner,
     systems: Vec<Box<sys::System>>,
     last_time: u64,
 }
@@ -59,8 +59,8 @@ fn create_program<R: gfx::Resources, F: gfx::Factory<R>>(
 }
 
 fn create_ship<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F,
-               world: &parsec::World, program: gfx::handle::Program<R>)
-               -> parsec::Entity
+               world: &specs::World, program: gfx::handle::Program<R>)
+               -> specs::Entity
 {
     let (vbuf, slice) = factory.create_vertex_buffer(&[
         Vertex::new(-0.3, -0.5, 0x20C02000),
@@ -101,7 +101,7 @@ impl Game {
                (ev_control, ev_bullet): ::event::ReceiverHub)
                -> Game
     {
-        let mut w = parsec::World::new();
+        let mut w = specs::World::new();
         // prepare systems
         /*let program = create_program(factory);
         let mut draw_system = sys::draw::System::new(SCREEN_EXTENTS);
@@ -143,7 +143,7 @@ impl Game {
         ];*/
         let systems = vec![];
         Game {
-            scheduler: parsec::Scheduler::new(w, 4),
+            planner: specs::Planner::new(w, 4),
             systems: systems,
             last_time: time::precise_time_ns(),
         }
@@ -154,7 +154,7 @@ impl Game {
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;
         for sys in self.systems.iter_mut() {
-            sys.process(&self.scheduler, delta);
+            sys.process(&self.planner, delta);
         }
     }
 
