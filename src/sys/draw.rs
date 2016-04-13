@@ -1,25 +1,81 @@
+use std::sync::mpsc;
 use gfx;
-use id::Storage;
 use world as w;
+use ColorFormat;
 
-pub struct System<R: gfx::Resources> {
-    extents: [f32; 2],
-    pub context: gfx::batch::Context<R>,
+gfx_pipeline!(pipe {
+    output: gfx::RenderTarget<gfx::format::Srgba8> = "Target0",
+});
+
+pub struct EncoderChannel<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
+    pub receiver: mpsc::Receiver<gfx::Encoder<R, C>>,
+    pub sender: mpsc::Sender<gfx::Encoder<R, C>>,
 }
 
-impl<R: gfx::Resources> System<R> {
-    pub fn new(extents: [f32; 2]) -> System<R> {
+/*fn game_loop<
+    R: gfx::Resources + Send + 'static,
+    C: gfx::CommandBuffer<R> + Send,
+>(  mut game: game::Game,
+    ren_recv: mpsc::Receiver<gfx::Encoder<R, C>>,
+    ren_end: mpsc::Sender<gfx::Encoder<R, C>>)
+{
+    while game.is_alive() {
+        let mut encoder = match ren_recv.recv() {
+            Ok(r) => r,
+            Err(_) => break,
+        };
+        game.render(&mut encoder);
+        match ren_end.send(encoder) {
+            Ok(_) => (),
+            Err(_) => break,
+        }
+    }
+}*/
+
+
+pub struct System<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
+    extents: [f32; 2],
+    channel: EncoderChannel<R, C>,
+    out_color: gfx::handle::RenderTargetView<R, ColorFormat>,
+    pso: Vec<gfx::PipelineState<R, pipe::Meta>>,
+}
+
+impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> System<R, C> {
+    pub fn new(extents: [f32; 2], chan: EncoderChannel<R, C>,
+               out: gfx::handle::RenderTargetView<R, ColorFormat>)
+               -> System<R, C>
+    {
         System {
             extents: extents,
-            context: gfx::batch::Context::new(),
+            channel: chan,
+            out_color: out,
+            pso: Vec::new(),
         }
     }
 }
 
-impl<R: gfx::Resources, C: gfx::CommandBuffer<R>, O: gfx::Output<R>> w::System<R, C, O> for System<R> {
-    fn process(&mut self, _: w::Delta, renderer: &mut gfx::Renderer<R, C>, output: &O,
-               data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
-        let clear_data = gfx::ClearData {
+impl<R, C> super::System for System<R, C> where
+R: 'static + gfx::Resources,
+C: 'static + gfx::CommandBuffer<R> + Send,
+{
+    fn process(&mut self, pl: &mut super::Planner, _: super::Delta) {
+        let mut encoder = match self.channel.receiver.recv() {
+            Ok(r) => r,
+            Err(_) => return,
+        };
+        let sender = self.channel.sender.clone();
+        let out = self.out_color.clone();
+        pl.run(move |arg| {
+            arg.fetch(|_| {});
+            encoder.clear(&out, [0.2, 0.3, 0.4, 1.0]);
+            //game.render(&mut encoder);
+            match sender.send(encoder) {
+                Ok(_) => (),
+                Err(_) => return,
+            }
+        });
+
+        /*let clear_data = gfx::ClearData {
             color: [0.0, 0.0, 0.1, 0.0],
             depth: 1.0,
             stencil: 0,
@@ -38,6 +94,6 @@ impl<R: gfx::Resources, C: gfx::CommandBuffer<R>, O: gfx::Output<R>> w::System<R
                 }
                 renderer.draw(&(&*drawable, &self.context), output).unwrap();
             });
-        }
+        }*/
     }
 }

@@ -16,28 +16,8 @@ mod game;
 mod world;
 mod sys;
 
-type ColorFormat = gfx::format::Srgba8;
-type DepthFormat = gfx::format::Depth;
-
-fn game_loop<
-    R: gfx::Resources + Send + 'static,
-    C: gfx::CommandBuffer<R> + Send,
->(  mut game: game::Game,
-    ren_recv: mpsc::Receiver<gfx::Encoder<R, C>>,
-    ren_end: mpsc::Sender<gfx::Encoder<R, C>>)
-{
-    while game.is_alive() {
-        let mut encoder = match ren_recv.recv() {
-            Ok(r) => r,
-            Err(_) => break,
-        };
-        game.render(&mut encoder);
-        match ren_end.send(encoder) {
-            Ok(_) => (),
-            Err(_) => break,
-        }
-    }
-}
+pub type ColorFormat = gfx::format::Srgba8;
+pub type DepthFormat = gfx::format::Depth;
 
 static USAGE: &'static str = "
 Controls:
@@ -61,13 +41,19 @@ pub fn main() {
     let (window, mut device, mut factory, main_color, _main_depth) =
         gfx_window_glutin::init::<ColorFormat, DepthFormat>(builder);
 
-    let game = game::Game::new(&mut factory, ev_recv);
-
     let enc: gfx::Encoder<_, _> = factory.create_command_buffer().into();
     game_send.send(enc.clone_empty()).unwrap(); // double-buffering renderers
     game_send.send(enc).unwrap();
 
-    std::thread::spawn(move || game_loop(game, game_recv, game_send));
+    let enc_chan = sys::draw::EncoderChannel {
+        receiver: game_recv,
+        sender: game_send,
+    };
+    let game = game::Game::new(&mut factory, ev_recv, enc_chan, main_color);
+    std::thread::spawn(|| {
+        let mut game = game;
+        while game.frame() {}
+    });
 
     'main: loop {
         use gfx::Device;

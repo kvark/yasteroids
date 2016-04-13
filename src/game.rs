@@ -1,3 +1,4 @@
+use std::sync::mpsc;
 use time;
 use cgmath::{Rad, Point2, Vector2};
 use specs;
@@ -5,6 +6,8 @@ use gfx;
 use gfx::traits::FactoryExt;
 use sys;
 use world;
+use ColorFormat;
+
 
 const SCREEN_EXTENTS: [f32; 2] = [10.0, 10.0];
 
@@ -97,14 +100,19 @@ fn create_ship<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F,
 }
 
 impl Game {
-    pub fn new<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F,
-               (ev_control, ev_bullet): ::event::ReceiverHub)
-               -> Game
+    pub fn new<R, F, C>(factory: &mut F,
+               (ev_control, ev_bullet): ::event::ReceiverHub,
+               encoder_chan: sys::draw::EncoderChannel<R, C>,
+               main_color: gfx::handle::RenderTargetView<R, ColorFormat>)
+               -> Game where
+    R: 'static + gfx::Resources,
+    F: gfx::Factory<R>,
+    C: 'static + gfx::CommandBuffer<R> + Send,
     {
         let mut w = specs::World::new();
         // prepare systems
+        let draw_system = sys::draw::System::new(SCREEN_EXTENTS, encoder_chan, main_color);
         /*let program = create_program(factory);
-        let mut draw_system = sys::draw::System::new(SCREEN_EXTENTS);
         let bullet_draw_id = {
             let mesh = factory.create_mesh(&[
                 Vertex::new(0.0, 0.0, 0xFF808000),
@@ -141,7 +149,9 @@ impl Game {
             Box::new(sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id)),
             Box::new(sys::physics::System::new()),
         ];*/
-        let systems = vec![];
+        let systems = vec![
+            Box::new(draw_system) as Box<sys::System>,
+        ];
         Game {
             planner: specs::Planner::new(w, 4),
             systems: systems,
@@ -149,16 +159,13 @@ impl Game {
         }
     }
 
-    pub fn render<R: gfx::Resources, C: gfx::CommandBuffer<R>>(&mut self, encoder: &mut gfx::Encoder<R, C>) {
+    pub fn frame(&mut self) -> bool {
         let new_time = time::precise_time_ns();
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;
         for sys in self.systems.iter_mut() {
-            sys.process(&self.planner, delta);
+            sys.process(&mut self.planner, delta);
         }
-    }
-
-    pub fn is_alive(&self) -> bool {
         /*
         self.world.entities.iter().find(|e| {
             match (e.control, e.collision) {
