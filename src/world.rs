@@ -2,27 +2,10 @@ use std::cmp;
 use std::marker::PhantomData;
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
 use gfx;
+use sys::draw::VisualType;
 
-
-gfx_constant_struct!(ShaderParam {
-    transform: [f32; 4] = "u_Transform",
-    screen_scale: [f32; 4] = "u_ScreenScale",
-});
-
-impl ShaderParam {
-    pub fn new() -> ShaderParam {
-        ShaderParam {
-            transform: [0.0; 4],
-            screen_scale: [1.0; 4],
-        }
-    }
-}
 
 /// --- Components ---
-
-pub struct Drawable<R: gfx::Resources> {
-    cbuf: gfx::handle::Buffer<R, ShaderParam>,
-}
 
 pub struct Spatial {
     pub pos: Point2<f32>,

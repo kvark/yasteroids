@@ -16,8 +16,7 @@ mod game;
 mod world;
 mod sys;
 
-pub type ColorFormat = gfx::format::Srgba8;
-pub type DepthFormat = gfx::format::Depth;
+type DepthFormat = gfx::format::Depth;
 
 static USAGE: &'static str = "
 Controls:
@@ -39,7 +38,7 @@ pub fn main() {
         .with_title(title.to_string())
         .with_gl(glutin::GlRequest::Specific(glutin::Api::OpenGl, (3, 2)));
     let (window, mut device, mut factory, main_color, _main_depth) =
-        gfx_window_glutin::init::<ColorFormat, DepthFormat>(builder);
+        gfx_window_glutin::init::<sys::draw::ColorFormat, DepthFormat>(builder);
 
     let enc: gfx::Encoder<_, _> = factory.create_command_buffer().into();
     game_send.send(enc.clone_empty()).unwrap(); // double-buffering renderers

@@ -5,26 +5,11 @@ use specs;
 use gfx;
 use gfx::traits::FactoryExt;
 use sys;
+use sys::draw::{Vertex, ColorFormat, VisualType};
 use world;
-use ColorFormat;
 
 
 const SCREEN_EXTENTS: [f32; 2] = [10.0, 10.0];
-
-gfx_vertex_struct!( Vertex {
-    pos: [f32; 2] = "a_Pos",
-    color: [gfx::format::U8Norm; 4] = "a_Color",
-});
-
-impl Vertex {
-    fn new(x: f32, y: f32, col: u32) -> Vertex {
-        let c4 = [(col>>24) as u8, (col>>16) as u8, (col>>8) as u8, col as u8];
-        Vertex {
-            pos: [x, y],
-            color: gfx::format::U8Norm::cast4(c4),
-        }
-    }
-}
 
 pub struct Game {
     planner: specs::Planner,
@@ -32,47 +17,9 @@ pub struct Game {
     last_time: u64,
 }
 
-fn create_program<R: gfx::Resources, F: gfx::Factory<R>>(
-                  factory: &mut F) -> gfx::handle::Program<R>
-{
-    factory.link_program(
-        b"
-            #version 150 core
-            in vec2 pos;
-            in vec4 color;
-            uniform vec4 transform, screen_scale;
-            out vec4 v_color;
-            void main() {
-                v_color = color;
-                vec2 sc = vec2(sin(transform.z), cos(transform.z));
-                vec2 p = vec2(pos.x*sc.y - pos.y*sc.x, pos.x*sc.x + pos.y*sc.y);
-                p = (p * transform.w + transform.xy) * screen_scale.xy;
-                gl_Position = vec4(p, 0.0, 1.0);
-            }
-        ",
-        b"
-            #version 150 core
-            in vec4 v_color;
-            out vec4 color;
-            void main() {
-                color = v_color;
-            }
-        "
-    ).unwrap()
-}
-
-fn create_ship<R: gfx::Resources, F: gfx::Factory<R>>(factory: &mut F,
-               world: &specs::World, program: gfx::handle::Program<R>)
-               -> specs::Entity
-{
-    let (vbuf, slice) = factory.create_vertex_buffer(&[
-        Vertex::new(-0.3, -0.5, 0x20C02000),
-        Vertex::new(0.3, -0.5,  0x20C02000),
-        Vertex::new(0.0, 0.5,   0xC0404000),
-    ]);
-    //state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::Nothing);
-    //let batch = draw.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
+fn create_ship(visual: VisualType, world: &specs::World) -> specs::Entity {
     world.create_now()
+         .with(visual)
          .build()
     /*world::Entity {
         draw: Some(data.draw.add(batch)),
@@ -110,8 +57,20 @@ impl Game {
     C: 'static + gfx::CommandBuffer<R> + Send,
     {
         let mut w = specs::World::new();
+        w.register::<VisualType>();
         // prepare systems
-        let draw_system = sys::draw::System::new(SCREEN_EXTENTS, encoder_chan, main_color);
+        let mut draw_system = sys::draw::System::new(SCREEN_EXTENTS, encoder_chan, main_color);
+        // prepare entities
+        let _ship = {
+            let rast = gfx::state::Rasterizer::new_fill(gfx::state::CullFace::Nothing);
+            let visual = draw_system.add_visual(factory,
+                gfx::Primitive::TriangleList, rast, &[
+                Vertex::new(-0.3, -0.5, 0x20C02000),
+                Vertex::new(0.3, -0.5,  0x20C02000),
+                Vertex::new(0.0, 0.5,   0xC0404000),
+            ]);
+            create_ship(visual, &w)
+        };
         /*let program = create_program(factory);
         let bullet_draw_id = {
             let mesh = factory.create_mesh(&[
