@@ -9,7 +9,7 @@ extern crate env_logger;
 extern crate rand;
 extern crate time;
 
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::mpsc;
 
 mod event;
 mod game;

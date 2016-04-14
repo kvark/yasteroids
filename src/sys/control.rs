@@ -1,6 +1,5 @@
 use std::sync::mpsc;
-use cgmath::{Angle, Rad, Point, Vector};
-use gfx;
+use cgmath::{Rad};
 use world as w;
 
 pub enum Event {
@@ -35,28 +34,15 @@ impl System {
 }
 
 impl super::System for System {
-    fn process(&mut self, _: &mut super::Planner, time: super::Delta) {
+    fn process(&mut self, plan: &mut super::Planner, time: super::Delta) {
         self.check_input();
-        /* TODO
-        for ent in entities.iter() {
-            match (ent.control, ent.inertia) {
-                (Some(c_id), Some(i_id)) => {
-                    let c = data.control.get(c_id);
-                    let i = data.inertia.get_mut(i_id);
-                    let rotate = time * c.turn_speed * self.turn;
-                    i.angular_velocity = Rad{ s: rotate };
-                    match ent.space {
-                        Some(s_id) => {
-                            let s = data.space.get_mut(s_id);
-                            let dir = s.get_direction();
-                            let thrust = time * c.thrust_speed * self.thrust;
-                            i.velocity.add_self_v(&dir.mul_s(thrust));
-                        },
-                        None => (),
-                    }
-                },
-                (_, _) => (),
-            }
-        }*/
+        let (thrust, turn) = (self.thrust, self.turn);
+        plan.run1w2r(move |inertia: &mut w::Inertial, space: &w::Spatial, control: &w::Control| {
+            let rotate = time * control.turn_speed * turn;
+            inertia.angular_velocity = Rad{ s: rotate };
+            let dir = space.get_direction();
+            let velocity = time * control.thrust_speed * thrust;
+            inertia.velocity = inertia.velocity + dir * velocity;
+        });
     }
 }

@@ -1,8 +1,8 @@
 use std::cmp;
 use std::marker::PhantomData;
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
-use gfx;
-use sys::draw::VisualType;
+use specs;
+//use sys::draw::VisualType;
 
 
 /// --- Components ---
@@ -20,14 +20,26 @@ impl Spatial {
     }
 }
 
+impl specs::Component for Spatial {
+    type Storage = specs::VecStorage<Spatial>;
+}
+
 pub struct Inertial {
     pub velocity: Vector2<f32>,
     pub angular_velocity: Rad<f32>,
 }
 
+impl specs::Component for Inertial {
+    type Storage = specs::VecStorage<Inertial>;
+}
+
 pub struct Control {
     pub thrust_speed: f32,
     pub turn_speed: f32,
+}
+
+impl specs::Component for Control {
+    type Storage = specs::VecStorage<Control>;
 }
 
 pub struct Bullet {

@@ -1,9 +1,7 @@
-use std::sync::mpsc;
 use time;
 use cgmath::{Rad, Point2, Vector2};
 use specs;
 use gfx;
-use gfx::traits::FactoryExt;
 use sys;
 use sys::draw::{Vertex, ColorFormat, VisualType};
 use world;
@@ -20,22 +18,21 @@ pub struct Game {
 fn create_ship(visual: VisualType, world: &specs::World) -> specs::Entity {
     world.create_now()
          .with(visual)
+         .with(world::Spatial {
+             pos: Point2::new(0.0, 0.0),
+             orient: Rad{ s: 0.0 },
+             scale: 1.0,
+         })
+         .with(world::Inertial {
+             velocity: Vector2::new(0.0, 0.0),
+             angular_velocity: Rad{ s:0.0 },
+         })
+         .with(world::Control {
+             thrust_speed: 4.0,
+             turn_speed: -90.0,
+         })
          .build()
     /*world::Entity {
-        draw: Some(data.draw.add(batch)),
-        space: Some(data.space.add(world::Spatial {
-            pos: Point2::new(0.0, 0.0),
-            orient: Rad{ s: 0.0 },
-            scale: 1.0,
-        })),
-        inertia: Some(data.inertia.add(world::Inertial {
-            velocity: Vector2::new(0.0, 0.0),
-            angular_velocity: Rad{ s:0.0 },
-        })),
-        control: Some(data.control.add(world::Control {
-            thrust_speed: 4.0,
-            turn_speed: -90.0,
-        })),
         bullet: None,
         aster: None,
         collision: Some(data.collision.add(world::Collision {
@@ -57,6 +54,9 @@ impl Game {
     C: 'static + gfx::CommandBuffer<R> + Send,
     {
         let mut w = specs::World::new();
+        w.register::<world::Spatial>();
+        w.register::<world::Inertial>();
+        w.register::<world::Control>();
         w.register::<VisualType>();
         // prepare systems
         let mut draw_system = sys::draw::System::new(SCREEN_EXTENTS, encoder_chan, main_color);
@@ -110,6 +110,8 @@ impl Game {
         ];*/
         let systems = vec![
             Box::new(draw_system) as Box<sys::System>,
+            Box::new(sys::control::System::new(ev_control)),
+            Box::new(sys::inertia::System),
         ];
         Game {
             planner: specs::Planner::new(w, 4),

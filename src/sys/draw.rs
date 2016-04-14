@@ -1,4 +1,4 @@
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 use specs;
 use gfx;
 use world as w;
@@ -25,16 +25,6 @@ gfx_constant_struct!(ShaderParam {
     transform: [f32; 4] = "u_Transform",
     screen_scale: [f32; 4] = "u_ScreenScale",
 });
-
-impl ShaderParam {
-    pub fn new() -> ShaderParam {
-        ShaderParam {
-            transform: [0.0; 4],
-            screen_scale: [1.0; 4],
-        }
-    }
-}
-
 
 gfx_pipeline!(pipe {
     vbuf: gfx::VertexBuffer<Vertex> = (),
@@ -86,7 +76,7 @@ pub struct System<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
     extents: [f32; 2],
     channel: EncoderChannel<R, C>,
     out_color: gfx::handle::RenderTargetView<R, ColorFormat>,
-    bundles: Vec<gfx::Bundle<R, pipe::Data<R>>>,
+    bundles: Arc<Vec<gfx::Bundle<R, pipe::Data<R>>>>,
 }
 
 impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> System<R, C> {
@@ -98,7 +88,7 @@ impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> System<R, C> {
             extents: extents,
             channel: chan,
             out_color: out,
-            bundles: Vec::new(),
+            bundles: Arc::new(Vec::new()),
         }
     }
 
@@ -114,7 +104,8 @@ impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> System<R, C> {
             output: self.out_color.clone(),
         };
         let id = self.bundles.len();
-        self.bundles.push(gfx::Bundle::new(slice, pso, data));
+        let mut bundles = Arc::get_mut(&mut self.bundles).unwrap();
+        bundles.push(gfx::Bundle::new(slice, pso, data));
         VisualType(id)
     }
 }
@@ -130,35 +121,35 @@ C: 'static + gfx::CommandBuffer<R> + Send,
         };
         let sender = self.channel.sender.clone();
         let out = self.out_color.clone();
+        let scale = [1.0 / self.extents[0], 1.0 / self.extents[1], 0.0, 0.0];
+        let bundles = self.bundles.clone();
         pl.run(move |arg| {
-            arg.fetch(|_| {});
+            let (draw, space, entities) = arg.fetch(|fa| {
+                (fa.read::<VisualType>(), fa.read::<w::Spatial>(), fa.entities())
+            });
             encoder.clear(&out, [0.2, 0.3, 0.4, 1.0]);
-            //game.render(&mut encoder);
+            // render entities
+            for e in entities {
+                use specs::Storage;
+                if let Some(d) = draw.get(e) {
+                    let trans = match space.get(e) {
+                        Some(s) => [s.pos.x, s.pos.y, s.orient.s, s.scale],
+                        None => [0.0, 0.0, 0.0, 0.0],
+                    };
+                    let param = ShaderParam {
+                        transform: trans,
+                        screen_scale: scale,
+                    };
+                    let b = &bundles[d.0];
+                    encoder.update_constant_buffer(&b.data.param, &param);
+                    b.encode(&mut encoder);
+                }
+            }
+            // done
             match sender.send(encoder) {
                 Ok(_) => (),
                 Err(_) => return,
             }
         });
-
-        /*let clear_data = gfx::ClearData {
-            color: [0.0, 0.0, 0.1, 0.0],
-            depth: 1.0,
-            stencil: 0,
-        };
-        renderer.clear(clear_data, gfx::COLOR, output);
-        for ent in entities.iter() {
-            ent.draw.map(|d_id| {
-                let drawable = data.draw.get_mut(d_id);
-                drawable.params.screen_scale = [1.0 / self.extents[0], 1.0 / self.extents[1], 0.0, 0.0];
-                match ent.space {
-                    Some(s_id) => {
-                        let s = data.space.get(s_id);
-                        drawable.params.transform = [s.pos.x, s.pos.y, s.orient.s, s.scale];
-                    }
-                    None => ()
-                }
-                renderer.draw(&(&*drawable, &self.context), output).unwrap();
-            });
-        }*/
     }
 }

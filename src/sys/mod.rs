@@ -2,7 +2,7 @@
 pub mod bullet;
 pub mod control;
 pub mod draw;
-//pub mod inertia;
+pub mod inertia;
 //pub mod physics;
 
 pub use specs::Planner;
