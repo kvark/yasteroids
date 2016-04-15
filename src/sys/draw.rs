@@ -65,6 +65,7 @@ pub struct EncoderChannel<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
     pub sender: mpsc::Sender<gfx::Encoder<R, C>>,
 }
 
+#[derive(Clone)]
 pub struct VisualType(usize);
 
 impl specs::Component for VisualType {
@@ -127,7 +128,7 @@ C: 'static + gfx::CommandBuffer<R> + Send,
             let (draw, space, entities) = arg.fetch(|fa| {
                 (fa.read::<VisualType>(), fa.read::<w::Spatial>(), fa.entities())
             });
-            encoder.clear(&out, [0.2, 0.3, 0.4, 1.0]);
+            encoder.clear(&out, [0.0, 0.0, 0.0, 1.0]);
             // render entities
             for e in entities {
                 use specs::Storage;

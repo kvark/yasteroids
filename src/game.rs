@@ -3,7 +3,7 @@ use cgmath::{Rad, Point2, Vector2};
 use specs;
 use gfx;
 use sys;
-use sys::draw::{Vertex, ColorFormat, VisualType};
+use sys::draw::{Vertex, ColorFormat};
 use world;
 
 
@@ -15,7 +15,7 @@ pub struct Game {
     last_time: u64,
 }
 
-fn create_ship(visual: VisualType, world: &specs::World) -> specs::Entity {
+fn create_ship(visual: world::VisualType, world: &specs::World) -> specs::Entity {
     world.create_now()
          .with(visual)
          .with(world::Spatial {
@@ -57,11 +57,14 @@ impl Game {
         w.register::<world::Spatial>();
         w.register::<world::Inertial>();
         w.register::<world::Control>();
-        w.register::<VisualType>();
+        w.register::<world::VisualType>();
+        w.register::<world::Bullet>();
+        w.register::<world::Asteroid>();
+        w.register::<world::Collision>();
         // prepare systems
         let mut draw_system = sys::draw::System::new(SCREEN_EXTENTS, encoder_chan, main_color);
         // prepare entities
-        let _ship = {
+        let ship = {
             let rast = gfx::state::Rasterizer::new_fill(gfx::state::CullFace::Nothing);
             let visual = draw_system.add_visual(factory,
                 gfx::Primitive::TriangleList, rast, &[
@@ -70,6 +73,14 @@ impl Game {
                 Vertex::new(0.0, 0.5,   0xC0404000),
             ]);
             create_ship(visual, &w)
+        };
+        let bullet_visual = {
+            let mut rast = gfx::state::Rasterizer::new_fill(gfx::state::CullFace::Nothing);
+            rast.method = gfx::state::RasterMethod::Point;
+            draw_system.add_visual(factory,
+                gfx::Primitive::PointList, rast, &[
+                Vertex::new(0.0, 0.0, 0xFF808000),
+            ])
         };
         /*let program = create_program(factory);
         let bullet_draw_id = {
@@ -95,14 +106,8 @@ impl Game {
             let batch = draw_system.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
             w.data.draw.add(batch)
         };
-        let ship = create_ship(factory, &mut w.data, &mut draw_system, program);
-        let (space_id, inertia_id) = (ship.space.unwrap(), ship.inertia.unwrap());
         // populate world and return
-        w.entities.push(ship);
         let systems = vec![
-            Box::new(draw_system) as Box<worldsystem<R, C, O>>,
-            Box::new(sys::inertia::System),
-            Box::new(sys::control::System::new(ev_control)),
             Box::new(sys::bullet::System::new(ev_bullet,
                 space_id, inertia_id, bullet_draw_id)),
             Box::new(sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id)),
@@ -112,6 +117,7 @@ impl Game {
             Box::new(draw_system) as Box<sys::System>,
             Box::new(sys::control::System::new(ev_control)),
             Box::new(sys::inertia::System),
+            Box::new(sys::bullet::System::new(ev_bullet, ship, bullet_visual)),
         ];
         Game {
             planner: specs::Planner::new(w, 4),

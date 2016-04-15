@@ -1,12 +1,12 @@
 use std::cmp;
-use std::marker::PhantomData;
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
 use specs;
-//use sys::draw::VisualType;
+pub use sys::draw::VisualType;
 
 
 /// --- Components ---
 
+#[derive(Clone)]
 pub struct Spatial {
     pub pos: Point2<f32>,
     pub orient: Rad<f32>,
@@ -24,6 +24,7 @@ impl specs::Component for Spatial {
     type Storage = specs::VecStorage<Spatial>;
 }
 
+#[derive(Clone)]
 pub struct Inertial {
     pub velocity: Vector2<f32>,
     pub angular_velocity: Rad<f32>,
@@ -39,21 +40,33 @@ pub struct Control {
 }
 
 impl specs::Component for Control {
-    type Storage = specs::VecStorage<Control>;
+    type Storage = specs::HashMapStorage<Control>;
 }
 
 pub struct Bullet {
     pub life_time: Option<f32>,
 }
 
+impl specs::Component for Bullet {
+    type Storage = specs::VecStorage<Bullet>;
+}
+
 pub struct Asteroid {
     pub kind: u8,
+}
+
+impl specs::Component for Asteroid {
+    type Storage = specs::VecStorage<Asteroid>;
 }
 
 pub struct Collision {
     pub radius: f32,
     pub health: u16,
     pub damage: u16,
+}
+
+impl specs::Component for Collision {
+    type Storage = specs::VecStorage<Collision>;
 }
 
 impl Collision {
