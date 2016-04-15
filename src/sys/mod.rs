@@ -1,4 +1,4 @@
-//pub mod aster;
+pub mod aster;
 pub mod bullet;
 pub mod control;
 pub mod draw;

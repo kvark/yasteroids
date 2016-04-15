@@ -37,7 +37,7 @@ impl System {
         }
     }
 
-    fn shoot(&self, w: &specs::World) -> specs::Entity {
+    fn spawn(&self, w: &specs::World) -> specs::Entity {
         use specs::Storage;
         let velocity = 5.0f32;
         let s0 = {
@@ -76,21 +76,14 @@ impl super::System for System {
         self.check_input();
         self.cool_time = if self.cool_time > time {self.cool_time - time} else {0.0};
         if self.shoot {
-            self.shoot(&plan.world);
+            self.spawn(&plan.world);
         }
         plan.run(move |arg| {
-            let (mut bullet, collision, entities) = arg.fetch(|w|
-                (w.write::<w::Bullet>(), w.read::<w::Collision>(), w.entities())
+            let (mut bullet, entities) = arg.fetch(|w|
+                (w.write::<w::Bullet>(), w.entities())
             );
             for e in entities {
                 use specs::Storage;
-                match collision.get(e) {
-                    Some(c) if c.health == 0 => {
-                        arg.delete(e);
-                        continue
-                    },
-                    _ => (),
-                }
                 match bullet.get_mut(e) {
                     Some(bt) => match bt.life_time {
                         Some(ref mut t) if *t>time => {

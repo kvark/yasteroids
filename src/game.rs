@@ -13,6 +13,7 @@ pub struct Game {
     planner: specs::Planner,
     systems: Vec<Box<sys::System>>,
     last_time: u64,
+    player: specs::Entity,
 }
 
 fn create_ship(visual: world::VisualType, world: &specs::World) -> specs::Entity {
@@ -31,16 +32,12 @@ fn create_ship(visual: world::VisualType, world: &specs::World) -> specs::Entity
              thrust_speed: 4.0,
              turn_speed: -90.0,
          })
-         .build()
-    /*world::Entity {
-        bullet: None,
-        aster: None,
-        collision: Some(data.collision.add(world::Collision {
+         .with(world::Collision {
             radius: 0.2,
             health: 3,
             damage: 2,
-        })),
-    }*/
+         })
+         .build()
 }
 
 impl Game {
@@ -82,65 +79,41 @@ impl Game {
                 Vertex::new(0.0, 0.0, 0xFF808000),
             ])
         };
-        /*let program = create_program(factory);
-        let bullet_draw_id = {
-            let mesh = factory.create_mesh(&[
-                Vertex::new(0.0, 0.0, 0xFF808000),
-            ]);
-            let slice = mesh.to_slice(gfx::PrimitiveType::Point);
-            let mut state = gfx::DrawState::new();
-            state.primitive.method = gfx::state::RasterMethod::Point;
-            let batch = draw_system.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
-            w.data.draw.add(batch)
-        };
-        let aster_draw_id = {
-            let mesh = factory.create_mesh(&[
+        let aster_visual = {
+            let rast = gfx::state::Rasterizer::new_fill(gfx::state::CullFace::Nothing);
+            draw_system.add_visual(factory,
+                gfx::Primitive::TriangleStrip, rast, &[
                 Vertex::new(-0.5, -0.5, 0xFFFFFF00),
                 Vertex::new(0.5, -0.5,  0xFFFFFF00),
                 Vertex::new(-0.5, 0.5,  0xFFFFFF00),
                 Vertex::new(0.5, 0.5,   0xFFFFFF00),
-            ]);
-            let slice = mesh.to_slice(gfx::PrimitiveType::TriangleStrip);
-            let mut state = gfx::DrawState::new();
-            state.primitive.method = gfx::state::RasterMethod::Fill(gfx::state::CullFace::Nothing);
-            let batch = draw_system.context.make_batch(&program, world::ShaderParam::new(), &mesh, slice, &state).unwrap();
-            w.data.draw.add(batch)
+            ])
         };
-        // populate world and return
-        let systems = vec![
-            Box::new(sys::bullet::System::new(ev_bullet,
-                space_id, inertia_id, bullet_draw_id)),
-            Box::new(sys::aster::System::new(SCREEN_EXTENTS, aster_draw_id)),
-            Box::new(sys::physics::System::new()),
-        ];*/
         let systems = vec![
             Box::new(draw_system) as Box<sys::System>,
             Box::new(sys::control::System::new(ev_control)),
             Box::new(sys::inertia::System),
             Box::new(sys::bullet::System::new(ev_bullet, ship, bullet_visual)),
+            Box::new(sys::aster::System::new(SCREEN_EXTENTS, aster_visual)),
+            //Box::new(sys::physics::System::new()),
         ];
         Game {
             planner: specs::Planner::new(w, 4),
             systems: systems,
             last_time: time::precise_time_ns(),
+            player: ship,
         }
     }
 
     pub fn frame(&mut self) -> bool {
+        use specs::Storage;
         let new_time = time::precise_time_ns();
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;
         for sys in self.systems.iter_mut() {
             sys.process(&mut self.planner, delta);
         }
-        /*
-        self.world.entities.iter().find(|e| {
-            match (e.control, e.collision) {
-                (Some(_), Some(o_id)) =>
-                    self.world.data.collision.get(o_id).health != 0,
-                _ => false,
-            }
-        }).is_some()*/
-        true
+        let control = self.planner.world.read::<world::Control>();
+        control.get(self.player).is_some()
     }
 }
