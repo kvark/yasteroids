@@ -1,5 +1,5 @@
 use rand::{Rng, StdRng};
-use cgmath::{Angle, Deg, Rad, Point, Point2};
+use cgmath::{Angle, Deg, Rad, Point2};
 use specs;
 use world as w;
 
@@ -77,14 +77,14 @@ impl super::System for System {
                 if aster.get(e).is_none() {
                     continue;
                 }
-                let s0 = space.get(e).unwrap();
-                if s0.pos.x.abs() > extents[0] || s0.pos.y.abs() > extents[1] {
+                let (pos, vel) = match (space.get(e), inertia.get(e)) {
+                    (Some(s), Some(i)) => (s.pos, i.velocity),
+                    _ => continue,
+                };
+                if  (pos.x.abs() > extents[0] && pos.x*vel.x >= 0.0) ||
+                    (pos.y.abs() > extents[1] && pos.y*vel.y >= 0.0) {
                     arg.delete(e);
                     continue;
-                }
-                match inertia.get(e) {
-                    Some(i) if s0.pos.dot(i.velocity) < 0.0 => (),
-                    _ => arg.delete(e),
                 }
             }
         });

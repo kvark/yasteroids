@@ -95,7 +95,7 @@ impl Game {
             Box::new(sys::inertia::System),
             Box::new(sys::bullet::System::new(ev_bullet, ship, bullet_visual)),
             Box::new(sys::aster::System::new(SCREEN_EXTENTS, aster_visual)),
-            //Box::new(sys::physics::System::new()),
+            Box::new(sys::physics::System::new()),
         ];
         Game {
             planner: specs::Planner::new(w, 4),
@@ -106,14 +106,13 @@ impl Game {
     }
 
     pub fn frame(&mut self) -> bool {
-        use specs::Storage;
         let new_time = time::precise_time_ns();
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;
         for sys in self.systems.iter_mut() {
             sys.process(&mut self.planner, delta);
         }
-        let control = self.planner.world.read::<world::Control>();
-        control.get(self.player).is_some()
+        self.planner.world.merge();
+        self.planner.world.is_alive(self.player)
     }
 }

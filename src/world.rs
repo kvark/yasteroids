@@ -59,6 +59,7 @@ impl specs::Component for Asteroid {
     type Storage = specs::VecStorage<Asteroid>;
 }
 
+#[derive(Clone)]
 pub struct Collision {
     pub radius: f32,
     pub health: u16,

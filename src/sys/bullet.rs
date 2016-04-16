@@ -3,6 +3,9 @@ use cgmath::{Rad};
 use specs;
 use world as w;
 
+
+const COOL_TIME: f32 = 0.1;
+
 pub enum Event {
     EvShoot(bool),
 }
@@ -74,10 +77,11 @@ impl System {
 impl super::System for System {
     fn process(&mut self, plan: &mut super::Planner, time: super::Delta) {
         self.check_input();
-        self.cool_time = if self.cool_time > time {self.cool_time - time} else {0.0};
-        if self.shoot {
+        if self.shoot && self.cool_time == 0.0 {
             self.spawn(&plan.world);
+            self.cool_time += COOL_TIME;
         }
+        self.cool_time = (self.cool_time - time).max(0.0);
         plan.run(move |arg| {
             let (mut bullet, entities) = arg.fetch(|w|
                 (w.write::<w::Bullet>(), w.entities())
