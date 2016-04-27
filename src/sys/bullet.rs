@@ -41,7 +41,6 @@ impl System {
     }
 
     fn spawn(&self, w: &specs::World) -> specs::Entity {
-        use specs::Storage;
         let velocity = 5.0f32;
         let s0 = {
             let s = w.read::<w::Spatial>();
@@ -74,34 +73,29 @@ impl System {
     }
 }
 
-impl super::System for System {
-    fn process(&mut self, plan: &mut super::Planner, time: super::Delta) {
+impl specs::System<super::Delta> for System {
+    fn run(&mut self, arg: specs::RunArg, time: super::Delta) {
+        use specs::Join;
         self.check_input();
-        if self.shoot && self.cool_time == 0.0 {
-            self.spawn(&plan.world);
-            self.cool_time += COOL_TIME;
-        }
-        self.cool_time = (self.cool_time - time).max(0.0);
-        plan.run(move |arg| {
-            let (mut bullet, entities) = arg.fetch(|w|
-                (w.write::<w::Bullet>(), w.entities())
-            );
-            for e in entities {
-                use specs::Storage;
-                match bullet.get_mut(e) {
-                    Some(bt) => match bt.life_time {
-                        Some(ref mut t) if *t>time => {
-                            *t -= time;
-                        },
-                        Some(_) => {
-                            bt.life_time = None;
-                            arg.delete(e);
-                        },
-                        None => (),
-                    },
-                    None => (),
-                }
+        let (mut bullet, entities) = arg.fetch(|w| {
+            if self.shoot && self.cool_time == 0.0 {
+                self.spawn(w);
+                self.cool_time += COOL_TIME;
             }
+            self.cool_time = (self.cool_time - time).max(0.0);
+            (w.write::<w::Bullet>(), w.entities())
         });
+        for (b, e) in (&mut bullet, &entities).iter() {
+            match b.life_time {
+                Some(ref mut t) if *t>time => {
+                    *t -= time;
+                },
+                Some(_) => {
+                    b.life_time = None;
+                    arg.delete(e);
+                },
+                None => (),
+            }
+        }
     }
 }

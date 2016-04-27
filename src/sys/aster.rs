@@ -60,33 +60,22 @@ impl System {
     }
 }
 
-impl super::System for System {
-    fn process(&mut self, plan: &mut super::Planner, time: super::Delta) {
+impl specs::System<super::Delta> for System {
+    fn run(&mut self, arg: specs::RunArg, time: super::Delta) {
+        use specs::Join;
         self.time_left += time;
-        while self.time_left >= self.rate {
-            self.time_left -= self.rate;
-            self.spawn(&plan.world);
-        }
-        let extents = self.screen_ext;
-        plan.run(move |arg| {
-            let (aster, space, inertia, entities) = arg.fetch(|w|
-                (w.read::<w::Asteroid>(), w.read::<w::Spatial>(), w.read::<w::Inertial>(), w.entities())
-            );
-            for e in entities {
-                use specs::Storage;
-                if aster.get(e).is_none() {
-                    continue;
-                }
-                let (pos, vel) = match (space.get(e), inertia.get(e)) {
-                    (Some(s), Some(i)) => (s.pos, i.velocity),
-                    _ => continue,
-                };
-                if  (pos.x.abs() > extents[0] && pos.x*vel.x >= 0.0) ||
-                    (pos.y.abs() > extents[1] && pos.y*vel.y >= 0.0) {
-                    arg.delete(e);
-                    continue;
-                }
+        let (aster, space, inertia, entities) = arg.fetch(|w| {
+            while self.time_left >= self.rate {
+                self.time_left -= self.rate;
+                self.spawn(w);
             }
+            (w.read::<w::Asteroid>(), w.read::<w::Spatial>(), w.read::<w::Inertial>(), w.entities())
         });
+        for (_, s, i, e) in (&aster, &space, &inertia, &entities).iter() {
+            if  (s.pos.x.abs() > self.screen_ext[0] && s.pos.x * i.velocity.x >= 0.0) ||
+                (s.pos.y.abs() > self.screen_ext[1] && s.pos.y * i.velocity.y >= 0.0) {
+                arg.delete(e);
+            }
+        }
     }
 }

@@ -1,4 +1,3 @@
-use std::cmp;
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
 use specs;
 pub use sys::draw::VisualType;
@@ -68,10 +67,4 @@ pub struct Collision {
 
 impl specs::Component for Collision {
     type Storage = specs::VecStorage<Collision>;
-}
-
-impl Collision {
-    pub fn hit(&mut self, d: u16) {
-        self.health = cmp::max(self.health, d) - d;
-    }
 }

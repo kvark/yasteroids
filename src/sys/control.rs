@@ -1,5 +1,6 @@
 use std::sync::mpsc;
 use cgmath::{Rad};
+use specs;
 use world as w;
 
 pub enum Event {
@@ -33,16 +34,19 @@ impl System {
     }
 }
 
-impl super::System for System {
-    fn process(&mut self, plan: &mut super::Planner, time: super::Delta) {
+impl specs::System<super::Delta> for System {
+    fn run(&mut self, arg: specs::RunArg, time: super::Delta) {
+        use specs::Join;
         self.check_input();
-        let (thrust, turn) = (self.thrust, self.turn);
-        plan.run1w2r(move |inertia: &mut w::Inertial, space: &w::Spatial, control: &w::Control| {
-            let rotate = time * control.turn_speed * turn;
-            inertia.angular_velocity = Rad{ s: rotate };
-            let dir = space.get_direction();
-            let velocity = time * control.thrust_speed * thrust;
-            inertia.velocity = inertia.velocity + dir * velocity;
-        });
+        let (mut inertia, space, control) = arg.fetch(|w|
+            (w.write::<w::Inertial>(), w.read::<w::Spatial>(), w.read::<w::Control>())
+        );
+        for (i, s, c) in (&mut inertia, &space, &control).iter() {
+            let rotate = time * c.turn_speed * self.turn;
+            i.angular_velocity = Rad{ s: rotate };
+            let dir = s.get_direction();
+            let velocity = time * c.thrust_speed * self.thrust;
+            i.velocity = i.velocity + dir * velocity;
+        }
     }
 }

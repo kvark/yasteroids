@@ -1,12 +1,17 @@
+use specs;
 use world as w;
 
 pub struct System;
 
-impl super::System for System {
-    fn process(&mut self, plan: &mut super::Planner, time: super::Delta) {
-        plan.run1w1r(move |space: &mut w::Spatial, inertia: &w::Inertial| {
-            space.pos = space.pos + inertia.velocity * time;
-            space.orient = space.orient + inertia.angular_velocity * time;
-        });
-    }
+impl specs::System<super::Delta> for System {
+	fn run(&mut self, arg: specs::RunArg, time: super::Delta) {
+		use specs::Join;
+		let (mut space, inertia) = arg.fetch(|w|
+			(w.write::<w::Spatial>(), w.read::<w::Inertial>())
+		);
+		for (s, i) in (&mut space, &inertia).iter() {
+			s.pos = s.pos + i.velocity * time;
+            s.orient = s.orient + i.angular_velocity * time;
+		}
+	}
 }

@@ -10,8 +10,7 @@ use world;
 const SCREEN_EXTENTS: [f32; 2] = [10.0, 10.0];
 
 pub struct Game {
-    planner: specs::Planner,
-    systems: Vec<Box<sys::System>>,
+    planner: specs::Planner<sys::Delta>,
     last_time: u64,
     player: specs::Entity,
 }
@@ -89,17 +88,15 @@ impl Game {
                 Vertex::new(0.5, 0.5,   0xFFFFFF00),
             ])
         };
-        let systems = vec![
-            Box::new(draw_system) as Box<sys::System>,
-            Box::new(sys::control::System::new(ev_control)),
-            Box::new(sys::inertia::System),
-            Box::new(sys::bullet::System::new(ev_bullet, ship, bullet_visual)),
-            Box::new(sys::aster::System::new(SCREEN_EXTENTS, aster_visual)),
-            Box::new(sys::physics::System::new()),
-        ];
+        let mut plan = specs::Planner::new(w, 2);
+        plan.add_system(draw_system, "draw", 10);
+        plan.add_system(sys::control::System::new(ev_control), "control", 30);
+        plan.add_system(sys::inertia::System, "inertia", 15);
+        plan.add_system(sys::bullet::System::new(ev_bullet, ship, bullet_visual), "bullet", 25);
+        plan.add_system(sys::aster::System::new(SCREEN_EXTENTS, aster_visual), "aster", 24);
+        plan.add_system(sys::physics::System::new(), "physics", 5);
         Game {
-            planner: specs::Planner::new(w, 4),
-            systems: systems,
+            planner: plan,
             last_time: time::precise_time_ns(),
             player: ship,
         }
@@ -109,10 +106,7 @@ impl Game {
         let new_time = time::precise_time_ns();
         let delta = (new_time - self.last_time) as f32 / 1e9;
         self.last_time = new_time;
-        for sys in self.systems.iter_mut() {
-            sys.process(&mut self.planner, delta);
-        }
-        self.planner.world.merge();
+        self.planner.dispatch(delta);
         self.planner.world.is_alive(self.player)
     }
 }

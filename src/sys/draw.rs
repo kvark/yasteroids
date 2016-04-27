@@ -98,7 +98,7 @@ impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> System<R, C> {
         use gfx::traits::FactoryExt;
         let program = factory.link_program(SHADER_VERT, SHADER_FRAG).unwrap();
         let pso = factory.create_pipeline_from_program(&program, primitive, rast, pipe::new()).unwrap();
-        let (vbuf, slice) = factory.create_vertex_buffer(vertices);
+        let (vbuf, slice) = factory.create_vertex_buffer_with_slice(vertices, ());
         let data = pipe::Data {
             vbuf: vbuf,
             param: factory.create_constant_buffer(1),
@@ -111,46 +111,32 @@ impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> System<R, C> {
     }
 }
 
-impl<R, C> super::System for System<R, C> where
+impl<R, C> specs::System<super::Delta> for System<R, C> where
 R: 'static + gfx::Resources,
 C: 'static + gfx::CommandBuffer<R> + Send,
 {
-    fn process(&mut self, pl: &mut super::Planner, _: super::Delta) {
+    fn run(&mut self, arg: specs::RunArg, _: super::Delta) {
+        use specs::Join;
         let mut encoder = match self.channel.receiver.recv() {
             Ok(r) => r,
             Err(_) => return,
         };
-        let sender = self.channel.sender.clone();
-        let out = self.out_color.clone();
         let scale = [1.0 / self.extents[0], 1.0 / self.extents[1], 0.0, 0.0];
-        let bundles = self.bundles.clone();
-        pl.run(move |arg| {
-            let (draw, space, entities) = arg.fetch(|fa| {
-                (fa.read::<VisualType>(), fa.read::<w::Spatial>(), fa.entities())
-            });
-            encoder.clear(&out, [0.0, 0.0, 0.0, 1.0]);
-            // render entities
-            for e in entities {
-                use specs::Storage;
-                if let Some(d) = draw.get(e) {
-                    let trans = match space.get(e) {
-                        Some(s) => [s.pos.x, s.pos.y, s.orient.s, s.scale],
-                        None => [0.0, 0.0, 0.0, 0.0],
-                    };
-                    let param = ShaderParam {
-                        transform: trans,
-                        screen_scale: scale,
-                    };
-                    let b = &bundles[d.0];
-                    encoder.update_constant_buffer(&b.data.param, &param);
-                    b.encode(&mut encoder);
-                }
-            }
-            // done
-            match sender.send(encoder) {
-                Ok(_) => (),
-                Err(_) => return,
-            }
+        let (draw, space) = arg.fetch(|w| {
+            (w.read::<VisualType>(), w.read::<w::Spatial>())
         });
+        encoder.clear(&self.out_color, [0.0, 0.0, 0.0, 1.0]);
+        // render entities
+        for (d, s) in (&draw, &space).iter() {
+            let param = ShaderParam {
+                transform: [s.pos.x, s.pos.y, s.orient.s, s.scale],
+                screen_scale: scale,
+            };
+            let b = &self.bundles[d.0];
+            encoder.update_constant_buffer(&b.data.param, &param);
+            b.encode(&mut encoder);
+        }
+        // done
+        let _ = self.channel.sender.send(encoder);
     }
 }
