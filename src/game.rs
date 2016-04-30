@@ -61,7 +61,7 @@ impl Game {
         let mut draw_system = sys::draw::System::new(SCREEN_EXTENTS, encoder_chan, main_color);
         // prepare entities
         let ship = {
-            let rast = gfx::state::Rasterizer::new_fill(gfx::state::CullFace::Nothing);
+            let rast = gfx::state::Rasterizer::new_fill();
             let visual = draw_system.add_visual(factory,
                 gfx::Primitive::TriangleList, rast, &[
                 Vertex::new(-0.3, -0.5, 0x20C02000),
@@ -71,7 +71,7 @@ impl Game {
             create_ship(visual, &w)
         };
         let bullet_visual = {
-            let mut rast = gfx::state::Rasterizer::new_fill(gfx::state::CullFace::Nothing);
+            let mut rast = gfx::state::Rasterizer::new_fill();
             rast.method = gfx::state::RasterMethod::Point;
             draw_system.add_visual(factory,
                 gfx::Primitive::PointList, rast, &[
@@ -79,7 +79,7 @@ impl Game {
             ])
         };
         let aster_visual = {
-            let rast = gfx::state::Rasterizer::new_fill(gfx::state::CullFace::Nothing);
+            let rast = gfx::state::Rasterizer::new_fill();
             draw_system.add_visual(factory,
                 gfx::Primitive::TriangleStrip, rast, &[
                 Vertex::new(-0.5, -0.5, 0xFFFFFF00),
