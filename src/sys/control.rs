@@ -1,7 +1,6 @@
 use std::sync::mpsc;
-use cgmath::{Angle, Rad, Point, Vector};
-use gfx;
-use id::Storage;
+use cgmath::{Rad};
+use specs;
 use world as w;
 
 pub enum Event {
@@ -35,29 +34,19 @@ impl System {
     }
 }
 
-impl<R: gfx::Resources, C: gfx::CommandBuffer<R>, O> w::System<R, C, O> for System {
-    fn process(&mut self, time: w::Delta, _: &mut gfx::Renderer<R, C>, _: &O,
-               data: &mut w::Components<R>, entities: &mut Vec<w::Entity<R>>) {
+impl specs::System<super::Delta> for System {
+    fn run(&mut self, arg: specs::RunArg, time: super::Delta) {
+        use specs::Join;
         self.check_input();
-        for ent in entities.iter() {
-            match (ent.control, ent.inertia) {
-                (Some(c_id), Some(i_id)) => {
-                    let c = data.control.get(c_id);
-                    let i = data.inertia.get_mut(i_id);
-                    let rotate = time * c.turn_speed * self.turn;
-                    i.angular_velocity = Rad{ s: rotate };
-                    match ent.space {
-                        Some(s_id) => {
-                            let s = data.space.get_mut(s_id);
-                            let dir = s.get_direction();
-                            let thrust = time * c.thrust_speed * self.thrust;
-                            i.velocity.add_self_v(&dir.mul_s(thrust));
-                        },
-                        None => (),
-                    }
-                },
-                (_, _) => (),
-            }
+        let (mut inertia, space, control) = arg.fetch(|w|
+            (w.write::<w::Inertial>(), w.read::<w::Spatial>(), w.read::<w::Control>())
+        );
+        for (i, s, c) in (&mut inertia, &space, &control).iter() {
+            let rotate = time * c.turn_speed * self.turn;
+            i.angular_velocity = Rad{ s: rotate };
+            let dir = s.get_direction();
+            let velocity = time * c.thrust_speed * self.thrust;
+            i.velocity = i.velocity + dir * velocity;
         }
     }
 }

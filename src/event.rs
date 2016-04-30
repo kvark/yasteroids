@@ -1,7 +1,5 @@
 use std::sync::mpsc;
 use glutin;
-#[cfg(feature = "glfw")]
-use glfw;
 use sys;
 
 pub type ReceiverHub = (
@@ -46,33 +44,6 @@ impl SenderHub {
                 self.bullet.send(EvShoot(match state {
                     ElementState::Pressed => true,
                     ElementState::Released => false,
-                })).unwrap(),
-            _ => (),
-        }
-    }
-
-    #[cfg(feature = "glfw")]
-    pub fn process_glfw(&self, event: glfw::WindowEvent) {
-        use sys::control::Event::*;
-        use sys::bullet::Event::*;
-        use glfw::{Action, Key, WindowEvent};
-        match event {
-            WindowEvent::Key(Key::A, _, state, _) =>
-                self.control.send(EvThrust(match state {
-                    Action::Press | Action::Repeat => 1.0,
-                    Action::Release => 0.0,
-                })).unwrap(),
-            WindowEvent::Key(Key::Left, _, Action::Press, _) =>
-                self.control.send(EvTurn(-1.0)).unwrap(),
-            WindowEvent::Key(Key::Right, _, Action::Press, _) =>
-                self.control.send(EvTurn(1.0)).unwrap(),
-            WindowEvent::Key(k, _, Action::Release, _)
-                if k == Key::Left || k == Key::Right =>
-                self.control.send(EvTurn(0.0)).unwrap(),
-            WindowEvent::Key(Key::S, _, state, _) =>
-                self.bullet.send(EvShoot(match state {
-                    Action::Press | Action::Repeat => true,
-                    Action::Release => false,
                 })).unwrap(),
             _ => (),
         }

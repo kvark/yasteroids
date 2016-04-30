@@ -1,30 +1,9 @@
-use std::cmp;
-use std::marker::PhantomData;
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
-use gfx;
-use id;
+use specs;
+pub use sys::draw::VisualType;
 
-#[shader_param]
-pub struct ShaderParam<R: gfx::Resources> {
-    //TODO: hide these
-    pub transform: [f32; 4],
-    pub screen_scale: [f32; 4],
-    _dummy: PhantomData<R>,
-}
-
-impl<R: gfx::Resources> ShaderParam<R> {
-    pub fn new() -> ShaderParam<R> {
-        ShaderParam {
-            transform: [0.0; 4],
-            screen_scale: [1.0; 4],
-            _dummy: PhantomData,
-        }
-    }
-}
 
 /// --- Components ---
-
-pub type Drawable<R: gfx::Resources> = gfx::batch::RefBatch<ShaderParam<R>>;
 
 #[derive(Clone)]
 pub struct Spatial {
@@ -36,8 +15,12 @@ pub struct Spatial {
 impl Spatial {
     pub fn get_direction(&self) -> Vector2<f32> {
         let rot: Basis2<f32> = Rotation2::from_angle(self.orient);
-        rot.rotate_vector(&Vector2::unit_y())
+        rot.rotate_vector(Vector2::unit_y())
     }
+}
+
+impl specs::Component for Spatial {
+    type Storage = specs::VecStorage<Spatial>;
 }
 
 #[derive(Clone)]
@@ -46,20 +29,33 @@ pub struct Inertial {
     pub angular_velocity: Rad<f32>,
 }
 
-#[derive(Clone)]
+impl specs::Component for Inertial {
+    type Storage = specs::VecStorage<Inertial>;
+}
+
 pub struct Control {
     pub thrust_speed: f32,
     pub turn_speed: f32,
 }
 
-#[derive(Clone)]
+impl specs::Component for Control {
+    type Storage = specs::HashMapStorage<Control>;
+}
+
 pub struct Bullet {
     pub life_time: Option<f32>,
 }
 
-#[derive(Clone)]
+impl specs::Component for Bullet {
+    type Storage = specs::VecStorage<Bullet>;
+}
+
 pub struct Asteroid {
     pub kind: u8,
+}
+
+impl specs::Component for Asteroid {
+    type Storage = specs::VecStorage<Asteroid>;
 }
 
 #[derive(Clone)]
@@ -69,25 +65,6 @@ pub struct Collision {
     pub damage: u16,
 }
 
-impl Collision {
-    pub fn hit(&mut self, d: u16) {
-        self.health = cmp::max(self.health, d) - d;
-    }
-}
-
-#[secs(id)]
-pub struct Prototype<R: gfx::Resources> {
-    draw: Drawable<R>,
-    space: Spatial,
-    inertia: Inertial,
-    control: Control,
-    bullet: Bullet,
-    aster: Asteroid,
-    collision: Collision,
-}
-
-pub type Delta = f32;
-
-pub trait System<R: gfx::Resources, C: gfx::CommandBuffer<R>, O>: Send {
-    fn process(&mut self, Delta, &mut gfx::Renderer<R, C>, &O, &mut Components<R>, &mut Vec<Entity<R>>);
+impl specs::Component for Collision {
+    type Storage = specs::VecStorage<Collision>;
 }
