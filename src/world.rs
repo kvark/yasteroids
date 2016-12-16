@@ -1,6 +1,6 @@
 use cgmath::{Rad, Basis2, Rotation, Rotation2, Point2, Vector2};
 use specs;
-pub use sys::draw::VisualType;
+pub use sys::draw::Drawable;
 
 
 /// --- Components ---

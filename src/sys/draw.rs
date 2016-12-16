@@ -1,7 +1,10 @@
-use std::sync::{mpsc, Arc};
+use std::sync::Arc;
+
+use pegasus;
 use specs;
 use gfx;
-use world as w;
+
+use world;
 
 
 pub type ColorFormat = gfx::format::Srgba8;
@@ -60,41 +63,28 @@ const SHADER_FRAG: &'static [u8] = b"
 ";
 
 
-pub struct EncoderChannel<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
-    pub receiver: mpsc::Receiver<gfx::Encoder<R, C>>,
-    pub sender: mpsc::Sender<gfx::Encoder<R, C>>,
-}
-
 #[derive(Clone)]
-pub struct VisualType(usize);
+pub struct Drawable(usize, ShaderParam);
 
-impl specs::Component for VisualType {
-    type Storage = specs::VecStorage<VisualType>;
+impl specs::Component for Drawable {
+    type Storage = specs::VecStorage<Drawable>;
 }
 
-
-pub struct System<R: gfx::Resources, C: gfx::CommandBuffer<R>> {
-    extents: [f32; 2],
-    channel: EncoderChannel<R, C>,
+pub struct Painter<R: gfx::Resources> {
     out_color: gfx::handle::RenderTargetView<R, ColorFormat>,
     bundles: Arc<Vec<gfx::Bundle<R, pipe::Data<R>>>>,
 }
 
-impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> System<R, C> {
-    pub fn new(extents: [f32; 2], chan: EncoderChannel<R, C>,
-               out: gfx::handle::RenderTargetView<R, ColorFormat>)
-               -> System<R, C>
-    {
-        System {
-            extents: extents,
-            channel: chan,
-            out_color: out,
+impl<R: gfx::Resources> Painter<R> {
+    pub fn new(target: gfx::handle::RenderTargetView<R, ColorFormat>) -> Painter<R> {
+        Painter {
+            out_color: target,
             bundles: Arc::new(Vec::new()),
         }
     }
 
     pub fn add_visual<F: gfx::Factory<R>>(&mut self, factory: &mut F, primitive: gfx::Primitive,
-                      rast: gfx::state::Rasterizer, vertices: &[Vertex]) -> VisualType {
+                      rast: gfx::state::Rasterizer, vertices: &[Vertex]) -> Drawable {
         use gfx::traits::FactoryExt;
         let program = factory.link_program(SHADER_VERT, SHADER_FRAG).unwrap();
         let pso = factory.create_pipeline_from_program(&program, primitive, rast, pipe::new()).unwrap();
@@ -107,36 +97,53 @@ impl<R: gfx::Resources, C: gfx::CommandBuffer<R>> System<R, C> {
         let id = self.bundles.len();
         let mut bundles = Arc::get_mut(&mut self.bundles).unwrap();
         bundles.push(gfx::Bundle::new(slice, pso, data));
-        VisualType(id)
+        Drawable(id, ShaderParam {
+            transform: [0.0; 4],
+            screen_scale: [0.0; 4],
+        })
     }
 }
 
-impl<R, C> specs::System<super::Delta> for System<R, C> where
-R: 'static + gfx::Resources,
-C: 'static + gfx::CommandBuffer<R> + Send,
-{
-    fn run(&mut self, arg: specs::RunArg, _: super::Delta) {
-        use specs::Join;
-        let mut encoder = match self.channel.receiver.recv() {
-            Ok(r) => r,
-            Err(_) => return,
-        };
-        let scale = [1.0 / self.extents[0], 1.0 / self.extents[1], 0.0, 0.0];
-        let (draw, space) = arg.fetch(|w| {
-            (w.read::<VisualType>(), w.read::<w::Spatial>())
-        });
+impl<R: gfx::Resources> pegasus::Painter<R> for Painter<R> {
+    type Visual = Drawable;
+    fn draw<'a, I, C>(&mut self, iter: I, encoder: &mut gfx::Encoder<R, C>) where
+        I: Iterator<Item = &'a Self::Visual>,
+        C: gfx::CommandBuffer<R>
+    {
         encoder.clear(&self.out_color, [0.0, 0.0, 0.0, 1.0]);
-        // render entities
-        for (d, s) in (&draw, &space).iter() {
-            let param = ShaderParam {
+        for &Drawable(vi, ref param) in iter {
+            let b = &self.bundles[vi];
+            encoder.update_constant_buffer(&b.data.param, param);
+            b.encode(encoder);
+        }
+    }
+}
+
+// the pre-draw system updates the Drawables with the fresh info
+pub struct System {
+    extents: [f32; 2],
+}
+
+impl System {
+    pub fn new(extents: [f32; 2]) -> System {
+        System {
+            extents: extents,
+        }
+    }
+}
+
+impl specs::System<pegasus::Delta> for System {
+    fn run(&mut self, arg: specs::RunArg, _: pegasus::Delta) {
+        use specs::Join;
+        let (mut draw, space) = arg.fetch(|w| {
+            (w.write::<Drawable>(), w.read::<world::Spatial>())
+        });
+        let scale = [1.0 / self.extents[0], 1.0 / self.extents[1], 0.0, 0.0];
+        for (d, s) in (&mut draw, &space).iter() {
+            d.1 = ShaderParam {
                 transform: [s.pos.x, s.pos.y, s.orient.s, s.scale],
                 screen_scale: scale,
             };
-            let b = &self.bundles[d.0];
-            encoder.update_constant_buffer(&b.data.param, &param);
-            b.encode(&mut encoder);
         }
-        // done
-        let _ = self.channel.sender.send(encoder);
     }
 }

@@ -14,19 +14,19 @@ pub struct System {
     input: mpsc::Receiver<Event>,
     shoot: bool,
     ship_entity: specs::Entity,
-    visual: w::VisualType,
+    drawable: w::Drawable,
     cool_time: f32,
 }
 
 impl System {
-    pub fn new(chan: mpsc::Receiver<Event>, ship: specs::Entity, visual: w::VisualType)
+    pub fn new(chan: mpsc::Receiver<Event>, ship: specs::Entity, drawable: w::Drawable)
                -> System
     {
         System {
             input: chan,
             shoot: false,
             ship_entity: ship,
-            visual: visual,
+            drawable: drawable,
             cool_time: 1.0,
         }
     }
@@ -50,11 +50,11 @@ impl System {
             let s = w.read::<w::Inertial>();
             s.get(self.ship_entity).unwrap().clone()
         };
-        w.create_now()
+        w.create_later_build()
             .with(w::Bullet {
                 life_time: Some(1.0),
             })
-            .with(self.visual.clone())
+            .with(self.drawable.clone())
             .with(w::Spatial {
                 pos: s0.pos + s0.get_direction() * 0.5,
                 orient: Rad{ s: 0.0 },

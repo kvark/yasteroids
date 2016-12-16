@@ -1,5 +1,5 @@
 use rand::{Rng, StdRng};
-use cgmath::{Angle, Deg, Rad, Point2};
+use cgmath::{Deg, Rad, Point2};
 use specs;
 use world as w;
 
@@ -10,19 +10,19 @@ pub struct System {
     spawn_radius: f32,
     rate: f32,
     time_left: super::Delta,
-    visual: w::VisualType,
+    drawable: w::Drawable,
     rng: StdRng,
 }
 
 impl System {
-    pub fn new(extents: [f32; 2], visual: w::VisualType) -> System {
+    pub fn new(extents: [f32; 2], drawable: w::Drawable) -> System {
         let radius = extents[0] + extents[1];
         System {
             screen_ext: extents,
             spawn_radius: radius,
             rate: 1.0,
             time_left: 3.0,
-            visual: visual,
+            drawable: drawable,
             rng: StdRng::new().unwrap(),
         }
     }
@@ -37,13 +37,13 @@ impl System {
             self.rng.gen_range(-self.screen_ext[0], self.screen_ext[0]),
             self.rng.gen_range(-self.screen_ext[1], self.screen_ext[1]),
         );
-        w.create_now()
+        w.create_later_build()
             .with(w::Spatial {
                 pos: origin_pos,
                 orient: Rad{ s: 0.0 },
                 scale: 1.0,
             })
-            .with(self.visual.clone())
+            .with(self.drawable.clone())
             .with(w::Inertial {
                 velocity: (target - origin_pos) * 0.1,
                 angular_velocity: Rad{ s: self.rng.gen_range(-2.0, 2.0) },

@@ -2,10 +2,10 @@ use std::sync::mpsc;
 use glutin;
 use sys;
 
-pub type ReceiverHub = (
-    mpsc::Receiver<sys::control::Event>,
-    mpsc::Receiver<sys::bullet::Event>
-);
+pub struct ReceiverHub {
+    pub control: mpsc::Receiver<sys::control::Event>,
+    pub bullet: mpsc::Receiver<sys::bullet::Event>,
+}
 
 pub struct SenderHub {
     control: mpsc::Sender<sys::control::Event>,
@@ -19,7 +19,11 @@ impl SenderHub {
         (SenderHub {
             control: sc,
             bullet: sb,
-        }, (rc, rb))
+        },
+        ReceiverHub {
+            control: rc,
+            bullet: rb,
+        })
     }
 
     pub fn process_glutin(&self, event: glutin::Event) {
