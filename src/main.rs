@@ -21,20 +21,6 @@ Controls:
     Left/Right - turn
 ";
 
-struct Handler {
-    hub: event::SenderHub,
-}
-
-impl pegasus::EventHandler for Handler {
-    fn handle(&mut self, event: glutin::Event) -> bool {
-        match event {
-            glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) |
-            glutin::Event::Closed => false,
-            _ => { self.hub.process_glutin(event); true }
-        }
-    }
-}
-
 pub fn main() {
     println!("{}", USAGE);
 
@@ -49,11 +35,18 @@ pub fn main() {
 
     let mut painter = sys::draw::Painter::new(main_color);
     let init = game::Init::new(&mut factory, &mut painter, ev_recv);
-    let handler = Handler {
-        hub: ev_send,
-    };
 
-    pegasus::fly(window, device,
-                 || factory.create_command_buffer(),
-                 init, painter, handler);
+    let mut pegasus = pegasus::Pegasus::new(init, device, painter, ||
+        factory.create_command_buffer());
+    
+    'main: while let Some(_swing) = pegasus.swing() {
+        window.swap_buffers().unwrap();
+        for event in window.poll_events() {
+            match event {
+                glutin::Event::KeyboardInput(_, _, Some(glutin::VirtualKeyCode::Escape)) |
+                glutin::Event::Closed => break 'main,
+                _ => ev_send.process_glutin(event),
+            }
+        }
+    }
 }
