@@ -42,7 +42,7 @@ impl specs::System<super::Delta> for System {
             (w.write::<w::Inertial>(), w.read::<w::Spatial>(), w.read::<w::Control>())
         );
         for (i, s, c) in (&mut inertia, &space, &control).iter() {
-            let rotate = time * c.turn_speed * self.turn;
+            let rotate = c.turn_speed * self.turn;
             i.angular_velocity = Rad{ s: rotate };
             let dir = s.get_direction();
             let velocity = time * c.thrust_speed * self.thrust;
