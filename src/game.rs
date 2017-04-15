@@ -72,7 +72,7 @@ fn create_ship(drawable: world::Drawable, world: &mut specs::World) -> specs::En
          })
          .with(world::Control {
              thrust_speed: 4.0,
-             turn_speed: -90.0,
+             turn_speed: -4.0,
          })
          .with(world::Collision {
             radius: 0.2,
